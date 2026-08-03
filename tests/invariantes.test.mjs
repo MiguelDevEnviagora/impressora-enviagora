@@ -212,3 +212,22 @@ test('o ID escrito no instalar.ps1 e nos docs bate com a chave publica versionad
     }
   }
 });
+
+test('so o release.yml exige o CRX; o ci.yml roda o build sem a chave de proposito', () => {
+  // Este acoplamento ja quebrou uma vez: a trava do build.mjs olhava process.env.CI, que
+  // vale nos DOIS workflows, e o ci.yml — que roda sem a chave de proposito — ficava
+  // vermelho para sempre. Agora a trava e explicita, e estes tres assertos garantem que
+  // ela continua ligada onde importa e desligada onde nao importa.
+  const build = fs.readFileSync(path.join(RAIZ, 'scripts', 'build.mjs'), 'utf8');
+  assert.match(build, /process\.env\.EXIGIR_CRX === '1'/,
+    'a trava do CRX voltou a depender de outra coisa que nao EXIGIR_CRX');
+  assert.doesNotMatch(build, /!temCrx && process\.env\.CI/,
+    'a trava voltou a olhar process.env.CI, que vale nos dois workflows');
+
+  const release = fs.readFileSync(path.join(RAIZ, '.github', 'workflows', 'release.yml'), 'utf8');
+  const ci = fs.readFileSync(path.join(RAIZ, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert.match(release, /EXIGIR_CRX:\s*'1'/,
+    'release.yml parou de exigir o CRX — um Release sem CRX nao atualiza maquina nenhuma');
+  assert.doesNotMatch(ci, /EXIGIR_CRX/,
+    'ci.yml passou a exigir o CRX, mas ele nao tem acesso ao secret');
+});

@@ -147,9 +147,14 @@ console.log('\n  atualizacao: ' + base + 'updates.xml');
 console.log('  download:    ' + base);
 console.log('  CRX no Release: ' + urlCrx + '\n');
 
-if (!temCrx && process.env.CI) {
-  console.error(cor.erro('  CI sem CRX_PRIVATE_KEY: o Release sairia sem o CRX e nenhuma maquina'));
-  console.error(cor.erro('  receberia a atualizacao. Configure o secret. Build abortado.\n'));
+// Aborta so quando quem chamou DECLAROU que precisa do CRX — o release.yml passa
+// EXIGIR_CRX=1. A trava nao pode ser por process.env.CI: o ci.yml roda este build de
+// proposito SEM a chave, so para conferir que o pacote monta, e ali a ausencia do CRX e
+// o comportamento esperado, nao um erro.
+if (!temCrx && process.env.EXIGIR_CRX === '1') {
+  console.error(cor.erro('  Faltou a chave privada e este build PRECISA do CRX.'));
+  console.error(cor.erro('  Sem ele o Release sai incompleto e nenhuma maquina atualiza.'));
+  console.error(cor.erro('  Configure o secret CRX_PRIVATE_KEY. Build abortado.\n'));
   process.exit(1);
 }
 

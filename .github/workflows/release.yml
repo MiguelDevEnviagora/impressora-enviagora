@@ -42,9 +42,9 @@ jobs:
       url: ${{ steps.pages.outputs.page_url }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -83,6 +83,10 @@ jobs:
       - name: Empacotar e assinar
         env:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+          # Declara que ESTE build precisa do CRX. Sem a variavel, o build.mjs so avisa
+          # que pulou a assinatura — que e o certo para o ci.yml, mas seria desastre aqui:
+          # um Release sem CRX nao atualiza maquina nenhuma e nao daria erro visivel.
+          EXIGIR_CRX: '1'
         run: node scripts/build.mjs
 
       - name: Conferir que os tres artefatos existem
