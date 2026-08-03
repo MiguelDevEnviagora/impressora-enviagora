@@ -164,37 +164,15 @@ chrome.runtime.onInstalled.addListener(() => {
   self.EnviagoraConfig.atualizarRemoto();
 
   chrome.storage.sync.get(null, (items) => {
-    const saved = { ...(items || {}) };
-    const versaoSalva = Number(saved.settingsSchemaVersion || 0);
+    // A decisao mora em config-padrao.js/migrarSync, que e uma funcao pura e tem teste
+    // caso a caso. Aqui fica so o efeito colateral: gravar o resultado.
+    const { gravar, remover, preservados, veioDa1632 } = self.EnviagoraConfig.migrarSync(items);
 
-    // CORRECAO DIRIGIDA 1632 -> 1633.
-    // A 16.32 saiu com printSafeMarginMm = 3 e isso encolheu a etiqueta dos Correios,
-    // que precisa sair coladinha na borda para o leitor conseguir bipar. Continua valendo
-    // para quem pulou da 16.32 direto para ca.
-    if (versaoSalva === 1632) {
-      saved.printSafeMarginMm = 0;
+    if (veioDa1632) {
       console.log('[Enviagora] migrando da 16.32: margem de seguranca zerada (Correios).');
     }
-
-    const ESQUEMA = self.EnviagoraConfig.ESQUEMA;
-    const PADRAO = self.EnviagoraConfig.PADRAO;
-    const remover = [];
-    const gravar = { settingsSchemaVersion: self.EnviagoraConfig.SCHEMA_VERSION };
-
-    for (const chave of Object.keys(saved)) {
-      if (chave === 'settingsSchemaVersion') continue;
-      // Campos que sairam nesta versao (autoPrint, debugBorder, corrigirCodigoBarras):
-      // nenhum codigo lia nenhum dos tres. Saem do storage tambem.
-      if (!ESQUEMA[chave]) { remover.push(chave); continue; }
-      // Igual ao padrao = nunca foi tocado: passa a seguir o remoto.
-      if (saved[chave] === PADRAO[chave]) { remover.push(chave); continue; }
-      // Diferente = ajuste real do operador. Preserva.
-      gravar[chave] = saved[chave];
-    }
-
-    const manter = Object.keys(gravar).filter((k) => k !== 'settingsSchemaVersion');
-    console.log('[Enviagora] migracao 1634: ' + manter.length + ' ajuste(s) do operador preservado(s)' +
-                (manter.length ? ' (' + manter.join(', ') + ')' : '') +
+    console.log('[Enviagora] migracao 1634: ' + preservados.length + ' ajuste(s) do operador preservado(s)' +
+                (preservados.length ? ' (' + preservados.join(', ') + ')' : '') +
                 '; ' + remover.length + ' campo(s) voltando a seguir o padrao.');
 
     const aplicar = () => chrome.storage.sync.set(gravar);

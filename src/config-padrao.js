@@ -233,6 +233,45 @@
     return s;
   }
 
+  /* ── MIGRACAO 1633 -> 1634 ────────────────────────────────────────────────
+     Funcao PURA de proposito: ela decide o que fica e o que sai do chrome.storage.sync
+     de ~60 maquinas em producao, e errar aqui apaga o ajuste manual de alguem sem
+     ninguem perceber. Sendo pura, tests/carregar.test.mjs exercita todos os casos.
+
+     A regra e conservadora:
+       valor igual ao padrao da 1633  -> nunca foi tocado, sai do sync e segue o remoto
+       valor diferente                -> ajuste real do operador, fica intacto
+       campo que nao existe mais      -> sai (autoPrint, debugBorder, corrigirCodigoBarras)
+
+     O valor EFETIVO nao muda para ninguem: o que sai do sync volta identico pelo PADRAO. */
+  function migrarSync(salvo) {
+    const saved = Object.assign({}, salvo || {});
+    const versaoSalva = Number(saved.settingsSchemaVersion || 0);
+
+    // CORRECAO DIRIGIDA 1632 -> 1633. A 16.32 saiu com printSafeMarginMm = 3 e isso
+    // encolheu a etiqueta dos Correios, que precisa sair colada na borda para o leitor
+    // conseguir bipar. Continua valendo para quem pulou da 16.32 direto para ca.
+    const veioDa1632 = versaoSalva === 1632;
+    if (veioDa1632) saved.printSafeMarginMm = 0;
+
+    const remover = [];
+    const gravar = { settingsSchemaVersion: SCHEMA_VERSION };
+
+    for (const chave of Object.keys(saved)) {
+      if (chave === 'settingsSchemaVersion') continue;
+      if (!ESQUEMA[chave]) { remover.push(chave); continue; }
+      if (saved[chave] === PADRAO[chave]) { remover.push(chave); continue; }
+      gravar[chave] = saved[chave];
+    }
+
+    return {
+      gravar,
+      remover,
+      veioDa1632,
+      preservados: Object.keys(gravar).filter((k) => k !== 'settingsSchemaVersion')
+    };
+  }
+
   /* ── Storage ──────────────────────────────────────────────────────────────
      sync  = delta do operador (+ enabled / lockEnabled / settingsSchemaVersion)
      local = cache do config remoto */
@@ -329,6 +368,7 @@
     validarCampo,
     validarRemoto,
     efetivo,
+    migrarSync,
     carregar,
     atualizarRemoto,
     _lerCache: lerCache
