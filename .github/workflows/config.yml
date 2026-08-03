@@ -67,7 +67,10 @@ jobs:
               core.info('ultimo release publicado: v' + versao);
               core.setOutput('versao', versao);
             } catch (e) {
-              const pkg = require('./package.json');
+              // readFileSync e nao require: no actions/github-script o `require` resolve a
+              // partir da pasta da action, nao do workspace — e acharia outro package.json.
+              const fs = require('fs');
+              const pkg = JSON.parse(fs.readFileSync(process.env.GITHUB_WORKSPACE + '/package.json', 'utf8'));
               core.warning('Nenhum release publicado ainda — usando a versao do package.json (' +
                            pkg.version + '). O updates.xml vai apontar para um CRX que ainda ' +
                            'nao existe, e as maquinas simplesmente nao encontram atualizacao. ' +

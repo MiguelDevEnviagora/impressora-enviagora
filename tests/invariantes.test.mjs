@@ -17,6 +17,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import { lerSrc, SRC, RAIZ } from './ajuda/carregar-extensao.mjs';
+import { idDaExtensao } from '../scripts/lib/crx.mjs';
 
 test('os Correios NUNCA recebem a margem de seguranca de impressao', () => {
   // v16.32 aplicou um piso de 3 mm em todo mundo. A etiqueta dos Correios ganhou borda
@@ -187,5 +188,27 @@ test('o manifest nao carrega codigo remoto (MV3 proibe)', () => {
     'unsafe-eval no CSP reprova na revisao da Web Store');
   for (const script of ['background.js', 'hook.js', 'content.js']) {
     assert.ok(fs.existsSync(path.join(SRC, script)), script + ' sumiu do src/');
+  }
+});
+
+test('o ID escrito no instalar.ps1 e nos docs bate com a chave publica versionada', () => {
+  // O instalar.ps1 libera UM id especifico no registro do Windows. Se ele divergir da
+  // chave, a politica libera uma extensao que nao existe e o Chrome recusa a instalacao
+  // em todas as 60 maquinas — com uma mensagem generica que nao aponta para aqui.
+  const chave = fs.readFileSync(path.join(RAIZ, 'config', 'chave-publica.txt'), 'utf8').trim();
+  const id = idDaExtensao(Buffer.from(chave, 'base64'));
+
+  const ps1 = fs.readFileSync(path.join(RAIZ, 'scripts', 'instalar.ps1'), 'utf8');
+  const noScript = ps1.match(/\$ID_EXTENSAO\s*=\s*'([a-p]{32})'/);
+  assert.ok(noScript, 'nao achei $ID_EXTENSAO em scripts/instalar.ps1');
+  assert.equal(noScript[1], id,
+    'instalar.ps1 libera o id ' + noScript[1] + ' mas a chave versionada gera ' + id);
+
+  for (const doc of ['README.md', 'docs/ARQUITETURA.md']) {
+    const texto = fs.readFileSync(path.join(RAIZ, doc), 'utf8');
+    const citados = [...texto.matchAll(/\b([a-p]{32})\b/g)].map((m) => m[1]);
+    for (const citado of citados) {
+      assert.equal(citado, id, doc + ' cita o id ' + citado + ', mas o correto e ' + id);
+    }
   }
 });
