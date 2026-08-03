@@ -14,6 +14,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { spawnSync } from 'node:child_process';
+
 import { lerSrc, SRC, RAIZ } from './ajuda/carregar-extensao.mjs';
 
 test('os Correios NUNCA recebem a margem de seguranca de impressao', () => {
@@ -118,31 +120,48 @@ test('os arquivos mortos nao voltaram', () => {
   assert.equal(manifest.web_accessible_resources[0].resources.includes('worker.html'), false);
 });
 
-test('a chave privada do CRX nao esta em lugar nenhum do repositorio', () => {
+test('a chave privada do CRX nao esta versionada nem no historico', (t) => {
   // Perder essa chave = perder a capacidade de atualizar as 60 maquinas.
   // Vazar essa chave = qualquer um consegue assinar um CRX que o Chrome aceita como
-  // atualizacao legitima desta extensao. O repositorio e PUBLICO por necessidade.
+  // atualizacao legitima desta extensao. E o repositorio e PUBLICO por necessidade.
+  //
+  // O teste pergunta ao GIT, e nao ao disco: ter um chave-privada.pem na pasta de quem
+  // builda e o fluxo NORMAL — e de la que o build tira a assinatura. O que nao pode e
+  // ele estar rastreado, agora ou em qualquer commit passado.
+
   // O marcador e montado em pedacos de proposito: escrito inteiro, este arquivo se
   // acusaria sozinho na varredura e o teste nunca passaria.
   const MARCADOR = '-----BEGIN ' + 'PRIVATE' + ' KEY-----';
   const MARCADOR_RSA = '-----BEGIN RSA ' + 'PRIVATE' + ' KEY-----';
+  const nomeSuspeito = (n) => /\.pem$|\.key$|chave-privada/i.test(n);
 
-  const suspeitos = [];
-  const varrer = (dir) => {
-    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (item.name === '.git' || item.name === 'node_modules' || item.name === 'dist') continue;
-      const completo = path.join(dir, item.name);
-      if (item.isDirectory()) { varrer(completo); continue; }
-      if (/\.pem$|\.key$|^chave-privada/i.test(item.name)) { suspeitos.push(completo); continue; }
-      if (/\.(js|mjs|json|md|txt|ps1|yml|html)$/i.test(item.name)) {
-        const conteudo = fs.readFileSync(completo, 'utf8');
-        if (conteudo.includes(MARCADOR) || conteudo.includes(MARCADOR_RSA)) suspeitos.push(completo);
-      }
-    }
+  const git = (args) => {
+    const r = spawnSync('git', args, { cwd: RAIZ, encoding: 'utf8' });
+    if (r.status !== 0) return null;
+    return r.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
   };
-  varrer(RAIZ);
-  assert.deepEqual(suspeitos, [],
-    'ha material de chave privada versionado: ' + suspeitos.join(', '));
+
+  const rastreados = git(['ls-files']);
+  if (rastreados === null) { t.skip('git indisponivel neste ambiente'); return; }
+
+  // 1) nada com cara de chave esta rastreado agora
+  assert.deepEqual(rastreados.filter(nomeSuspeito), [],
+    'ha arquivo de chave rastreado pelo git');
+
+  // 2) nem em nenhum commit do historico. Remover do HEAD nao basta: o objeto continua
+  //    recuperavel por quem clonar. Se este teste pegar algo, trate como chave vazada.
+  const jaAdicionados = git(['log', '--all', '--pretty=format:', '--name-only', '--diff-filter=A']) || [];
+  assert.deepEqual([...new Set(jaAdicionados.filter(nomeSuspeito))], [],
+    'um arquivo de chave ja foi commitado em algum ponto do historico — gere outra chave ' +
+    'e reescreva o historico antes de tornar o repositorio publico');
+
+  // 3) e nenhum arquivo rastreado carrega um PEM colado no meio do conteudo
+  const comPem = rastreados.filter((rel) => {
+    if (!/\.(js|mjs|json|md|txt|ps1|yml|yaml|html)$/i.test(rel)) return false;
+    const conteudo = fs.readFileSync(path.join(RAIZ, rel), 'utf8');
+    return conteudo.includes(MARCADOR) || conteudo.includes(MARCADOR_RSA);
+  });
+  assert.deepEqual(comPem, [], 'ha PEM de chave privada dentro de arquivo versionado');
 });
 
 test('.gitignore protege a chave e o dist', () => {

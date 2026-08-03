@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Impressora Enviagora — instalação</title>
+<style>
+  :root{
+    --verde:#16a34a; --verde-escuro:#15803d; --tinta:#111827; --fraco:#6b7280;
+    --linha:#e5e7eb; --fundo:#f9fafb; --papel:#fff;
+    --alerta-fundo:#fffbeb; --alerta-linha:#fcd34d; --alerta-tinta:#78350f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --tinta:#f3f4f6; --fraco:#9ca3af; --linha:#374151; --fundo:#111827; --papel:#1f2937;
+      --alerta-fundo:#292014; --alerta-linha:#a16207; --alerta-tinta:#fde68a;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--fundo);color:var(--tinta);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    padding:24px 16px 64px;
+  }
+  .caixa{max-width:680px;margin:0 auto}
+  header{text-align:center;margin-bottom:28px}
+  h1{font-size:26px;line-height:1.25;margin:0 0 6px;letter-spacing:-.3px}
+  .sub{color:var(--fraco);font-size:15px;margin:0}
+  .versao{
+    display:inline-block;margin-top:14px;padding:6px 16px;border-radius:999px;
+    background:var(--verde);color:#fff;font-weight:700;font-size:15px;letter-spacing:.3px;
+  }
+  .cartao{
+    background:var(--papel);border:1px solid var(--linha);border-radius:14px;
+    padding:22px;margin-bottom:18px;
+  }
+  .btn{
+    display:block;width:100%;padding:16px;border-radius:12px;text-decoration:none;
+    text-align:center;font-weight:700;font-size:17px;border:2px solid transparent;
+  }
+  .btn-principal{background:var(--verde);color:#fff}
+  .btn-principal:hover{background:var(--verde-escuro)}
+  .btn-secundario{background:transparent;color:var(--tinta);border-color:var(--linha);margin-top:10px;font-size:15px}
+  .btn-secundario:hover{border-color:var(--verde)}
+  .legenda{color:var(--fraco);font-size:13px;text-align:center;margin:10px 0 0}
+  h2{font-size:17px;margin:0 0 14px;letter-spacing:-.2px}
+  ol{margin:0;padding-left:0;list-style:none;counter-reset:passo}
+  ol li{
+    counter-increment:passo;position:relative;padding:0 0 16px 44px;margin:0;
+  }
+  ol li::before{
+    content:counter(passo);position:absolute;left:0;top:1px;width:28px;height:28px;
+    border-radius:50%;background:var(--verde);color:#fff;font-weight:700;font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  ol li:last-child{padding-bottom:0}
+  code{
+    background:var(--fundo);border:1px solid var(--linha);border-radius:6px;
+    padding:2px 7px;font:600 14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    white-space:nowrap;
+  }
+  .destaque{
+    background:var(--alerta-fundo);border:1px solid var(--alerta-linha);
+    color:var(--alerta-tinta);border-radius:12px;padding:16px 18px;margin:16px 0 0;
+  }
+  .destaque strong{display:block;margin-bottom:4px;font-size:15px}
+  .destaque p{margin:0;font-size:14.5px;line-height:1.55}
+  .nota{color:var(--fraco);font-size:14px;margin:14px 0 0}
+  footer{text-align:center;color:var(--fraco);font-size:13px;margin-top:32px;line-height:1.8}
+  footer a{color:var(--fraco)}
+  .id{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="caixa">
+
+  <header>
+    <h1>Impressora Enviagora</h1>
+    <p class="sub">Ajusta e imprime as etiquetas de envio no formato 100&times;150&nbsp;mm</p>
+    <div class="versao">versão {{VERSAO}}</div>
+  </header>
+
+  <div class="cartao">
+    <a class="btn btn-principal" href="{{URL_ZIP}}">Baixar extensão (ZIP)</a>
+    <a class="btn btn-secundario" href="{{URL_CRX}}">Baixar CRX (instalação com atualização automática)</a>
+    <p class="legenda">Na dúvida, baixe o ZIP. É o caminho que funciona em qualquer máquina.</p>
+  </div>
+
+  <div class="cartao">
+    <h2>Como instalar (5 minutos)</h2>
+    <ol>
+      <li>Baixe o ZIP no botão verde e <strong>descompacte</strong> numa pasta que não vá ser apagada — por exemplo <code>C:\Impressora-Enviagora</code>.</li>
+      <li>No Chrome, abra <code>chrome://extensions</code>.</li>
+      <li>Se já existir uma versão antiga da Impressora Enviagora, clique em <strong>Remover</strong>.</li>
+      <li>Ligue o <strong>Modo do desenvolvedor</strong>, no canto superior direito.</li>
+      <li>Clique em <strong>Carregar sem compactação</strong> e escolha a pasta que você descompactou.</li>
+      <li>Na extensão que apareceu, clique em <strong>Detalhes</strong> e ligue <strong>Permitir acesso a URLs de arquivo</strong>.</li>
+      <li>Recarregue a tela do sistema com <code>F5</code> e imprima uma etiqueta de teste.</li>
+    </ol>
+
+    <div class="destaque">
+      <strong>O passo 6 é o que mais deixa gente na mão.</strong>
+      <p>Sem “Permitir acesso a URLs de arquivo”, a etiqueta salva no computador não é ajustada — sai do jeito que veio. Esse botão não tem como ser ligado por script: <strong>alguém precisa clicar nele em cada máquina</strong>. Se a impressão sair errada, é o primeiro lugar a conferir.</p>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <h2>Deu problema?</h2>
+    <p class="nota"><strong>A etiqueta saiu sem ajuste.</strong> Confira o passo 6. Depois abra a extensão e veja se aparece alguma tarja no topo da tela do sistema.</p>
+    <p class="nota"><strong>Apareceu uma tarja vermelha</strong> dizendo que a extensão está desligada: alguém desligou nessa máquina. Abra a extensão e ligue de volta — vai pedir a senha.</p>
+    <p class="nota"><strong>Apareceu uma tarja laranja</strong> dizendo que está pausada pela central: não mexa em nada. A pausa foi feita de propósito e sai sozinha.</p>
+    <p class="nota"><strong>A etiqueta sai cortada na borda.</strong> Abra a extensão, item 6, e aumente a “margem de segurança” de 0 para 1 ou 2&nbsp;mm. Não mexa na margem dos Correios.</p>
+  </div>
+
+  <footer>
+    Uso interno da Enviagora.<br>
+    ID da extensão: <span class="id">{{ID}}</span><br>
+    Publicado em {{DATA}} &middot; <a href="{{URL_REPO}}">código-fonte</a>
+  </footer>
+
+</div>
+</body>
+</html>

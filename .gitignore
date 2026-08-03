@@ -21,6 +21,10 @@ chave-privada*
 # o repositorio.
 dist/
 
+# Pasta que o GitHub Pages publica, montada por scripts/gerar-site.mjs a cada deploy.
+_site/
+site/updates.xml
+
 # Node
 node_modules/
 npm-debug.log*

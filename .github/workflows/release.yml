@@ -1,0 +1,183 @@
+# Publica uma versao. Dispara com a tag v* (ex.: v16.34.0).
+#
+#   npm run bump -- minor
+#   git commit -am "v16.35.0: <o que muda para a operacao>"
+#   git tag v16.35.0
+#   git push origin main --tags
+#
+# O que acontece aqui, nesta ordem:
+#   1. roda os testes das 12 etiquetas — se falhar, nada e publicado;
+#   2. confere que a versao do manifest bate com a tag;
+#   3. empacota e ASSINA o CRX com o secret CRX_PRIVATE_KEY;
+#   4. cria o Release com ZIP, ZIP-webstore e CRX anexados;
+#   5. publica o Pages com o updates.xml apontando para o CRX deste Release.
+#
+# So depois do passo 5 as maquinas enxergam a versao nova.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: 'Versao a publicar (ex.: 16.34.0)'
+        required: true
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  publicar:
+    name: Testar, assinar e publicar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Descobrir a versao
+        id: v
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSAO="${{ inputs.versao }}"
+          else
+            VERSAO="${GITHUB_REF_NAME#v}"
+          fi
+          echo "versao=$VERSAO" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSAO" >> "$GITHUB_OUTPUT"
+          echo "Publicando a v$VERSAO"
+
+      # ── A trava mais importante do arquivo ──────────────────────────────────
+      # Uma tag que nao bate com o manifest publicaria um CRX cuja versao interna e
+      # diferente da que o updates.xml anuncia. O Chrome baixa, ve versao menor ou igual
+      # a que ja tem, e descarta EM SILENCIO. Ninguem atualiza e ninguem fica sabendo.
+      - name: Conferir que a tag bate com o manifest
+        run: |
+          MANIFEST=$(node -p "require('./src/manifest.json').version")
+          PKG=$(node -p "require('./package.json').version")
+          echo "tag=${{ steps.v.outputs.versao }}  manifest=$MANIFEST  package=$PKG"
+          if [ "$MANIFEST" != "${{ steps.v.outputs.versao }}" ] || [ "$PKG" != "${{ steps.v.outputs.versao }}" ]; then
+            echo "::error::A tag ${{ steps.v.outputs.tag }} nao bate com manifest ($MANIFEST) / package.json ($PKG). Rode 'npm run bump' antes de taguear."
+            exit 1
+          fi
+
+      - name: Testes (12 etiquetas, nos dois sentidos)
+        run: npm test
+
+      - name: Validar manifest e defaults.json
+        run: npm run validate
+
+      - name: Empacotar e assinar
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: node scripts/build.mjs
+
+      - name: Conferir que os tres artefatos existem
+        run: |
+          V="${{ steps.v.outputs.versao }}"
+          for f in "dist/impressora-enviagora-$V.zip" \
+                   "dist/impressora-enviagora-$V-webstore.zip" \
+                   "dist/impressora-enviagora-$V.crx"; do
+            [ -s "$f" ] || { echo "::error::faltou $f"; exit 1; }
+            echo "ok  $f  ($(stat -c%s "$f") bytes)"
+          done
+
+      - name: Criar o Release e anexar os arquivos
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = '${{ steps.v.outputs.tag }}';
+            const versao = '${{ steps.v.outputs.versao }}';
+            const { owner, repo } = context.repo;
+
+            const corpo = [
+              '## Impressora Enviagora v' + versao,
+              '',
+              '**Instalacao e atualizacao:** ' + `https://${owner.toLowerCase()}.github.io/${repo}/`,
+              '',
+              'Quem ja tem o CRX instalado recebe esta versao sozinho, em algumas horas.',
+              'Quem usa o ZIP precisa baixar e recarregar a extensao na mao.',
+              '',
+              '### Arquivos',
+              '- `impressora-enviagora-' + versao + '.crx` — instalacao com atualizacao automatica',
+              '- `impressora-enviagora-' + versao + '.zip` — instalacao por "Carregar sem compactacao"',
+              '- `impressora-enviagora-' + versao + '-webstore.zip` — envio para a Chrome Web Store',
+              '',
+              '> Depois de instalar, lembre do passo que nenhum script faz por voce:',
+              '> **Detalhes -> Permitir acesso a URLs de arquivo**.'
+            ].join('\n');
+
+            let release;
+            try {
+              release = (await github.rest.repos.getReleaseByTag({ owner, repo, tag })).data;
+              await github.rest.repos.updateRelease({
+                owner, repo, release_id: release.id, name: 'v' + versao, body: corpo
+              });
+            } catch (e) {
+              release = (await github.rest.repos.createRelease({
+                owner, repo, tag_name: tag, name: 'v' + versao, body: corpo
+              })).data;
+            }
+
+            for (const nome of [
+              `impressora-enviagora-${versao}.crx`,
+              `impressora-enviagora-${versao}.zip`,
+              `impressora-enviagora-${versao}-webstore.zip`
+            ]) {
+              const existente = release.assets?.find((a) => a.name === nome);
+              if (existente) {
+                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existente.id });
+              }
+              await github.rest.repos.uploadReleaseAsset({
+                owner, repo, release_id: release.id, name: nome,
+                data: fs.readFileSync('dist/' + nome),
+                headers: { 'content-type': 'application/octet-stream' }
+              });
+              core.info('anexado: ' + nome);
+            }
+
+      # ── Pages ───────────────────────────────────────────────────────────────
+      # Publicado DEPOIS do Release de proposito: o updates.xml so pode anunciar a versao
+      # nova quando o CRX ja estiver baixavel. Na ordem inversa, cada maquina que
+      # consultasse no meio do caminho levaria um 404.
+      - name: Montar o site
+        run: node scripts/gerar-site.mjs "${{ steps.v.outputs.versao }}"
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: pages
+        uses: actions/deploy-pages@v4
+
+      - name: Resumo
+        run: |
+          {
+            echo "### v${{ steps.v.outputs.versao }} publicada"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Download | ${{ steps.pages.outputs.page_url }} |"
+            echo "| Atualizacao | ${{ steps.pages.outputs.page_url }}updates.xml |"
+            echo "| Config | ${{ steps.pages.outputs.page_url }}config/defaults.json |"
+            echo ""
+            echo "As maquinas com o CRX instalado atualizam sozinhas em algumas horas."
+          } >> "$GITHUB_STEP_SUMMARY"

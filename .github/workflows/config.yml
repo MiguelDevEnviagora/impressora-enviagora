@@ -1,0 +1,110 @@
+# Publica um ajuste de configuracao SEM publicar versao nova da extensao.
+#
+# ESTE E O WORKFLOW QUE DA RETORNO MAIS RAPIDO.
+# Mudar a margem dos Correios, o texto do cabecalho ou ligar o kill switch nas ~60
+# maquinas vira: editar config/defaults.json, subir a configVersion, dar merge na main.
+# Vale em ate 1 hora, sem instalar nada, sem revisao de ninguem, sem tocar em maquina.
+#
+# Repare que ele NAO usa o secret CRX_PRIVATE_KEY. E de proposito: publicar configuracao
+# nao pode depender do segredo que assina release. Sao dois caminhos independentes, e o
+# de emergencia e o mais curto.
+name: Publicar configuracao
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/defaults.json'
+      - 'site/**'
+      - 'scripts/gerar-site.mjs'
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publicar:
+    name: Validar e publicar no Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Um defaults.json invalido nao derruba as maquinas (elas recusam campo a campo e
+      # seguem no padrao embutido), mas tambem nao faz o que voce queria. Melhor descobrir
+      # aqui, em 30 segundos, do que esperar uma hora para nada acontecer.
+      - name: Validar o defaults.json
+        run: npm run validate
+
+      - name: Testes
+        run: npm test
+
+      # A versao anunciada no updates.xml vem do ultimo Release PUBLICADO, e nao do
+      # package.json: se alguem subir a versao na main sem taguear, o updates.xml
+      # continuaria apontando para um CRX que nao existe e cada maquina levaria um 404.
+      - name: Descobrir a ultima versao publicada
+        id: v
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            try {
+              const r = await github.rest.repos.getLatestRelease({ owner, repo });
+              const versao = r.data.tag_name.replace(/^v/, '');
+              core.info('ultimo release publicado: v' + versao);
+              core.setOutput('versao', versao);
+            } catch (e) {
+              const pkg = require('./package.json');
+              core.warning('Nenhum release publicado ainda — usando a versao do package.json (' +
+                           pkg.version + '). O updates.xml vai apontar para um CRX que ainda ' +
+                           'nao existe, e as maquinas simplesmente nao encontram atualizacao. ' +
+                           'Isso se resolve sozinho no primeiro release.');
+              core.setOutput('versao', pkg.version);
+            }
+
+      - name: Montar o site
+        run: node scripts/gerar-site.mjs "${{ steps.v.outputs.versao }}"
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: pages
+        uses: actions/deploy-pages@v4
+
+      - name: Resumo
+        run: |
+          KILL=$(node -p "require('./config/defaults.json').killSwitch")
+          VER=$(node -p "require('./config/defaults.json').configVersion")
+          {
+            echo "### Configuracao publicada"
+            echo ""
+            echo "- \`configVersion\`: **$VER**"
+            echo "- \`killSwitch\`: **$KILL**"
+            echo "- endereco: ${{ steps.pages.outputs.page_url }}config/defaults.json"
+            echo ""
+            if [ "$KILL" = "true" ]; then
+              echo "> **KILL SWITCH LIGADO.** As maquinas param de ajustar etiqueta em ate 1 hora"
+              echo "> e passam a imprimir o PDF original. Uma tarja laranja avisa o operador."
+            else
+              echo "As maquinas pegam este ajuste em ate 1 hora, ou na hora se o operador abrir"
+              echo "a extensao e clicar em \"Buscar configuracao agora\" (item 9)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

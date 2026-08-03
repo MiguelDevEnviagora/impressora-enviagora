@@ -1,0 +1,40 @@
+# Testes em todo push e todo pull request.
+#
+# O que este workflow protege: as 12 etiquetas de tests/fixtures/. Elas sao o unico jeito
+# de saber, ANTES de publicar, se uma mudanca quebrou alguma transportadora. Se ele ficar
+# vermelho, nao publique — leia qual etiqueta quebrou.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  testes:
+    name: Testes e validacao
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Sem `npm ci`: o projeto nao tem dependencia de runtime nem de build. O ZIP, o CRX
+      # e os testes rodam em Node puro, de proposito — e o que assina o CRX que atualiza
+      # ~60 maquinas, entao a cadeia de terceiros aqui e zero.
+      - name: Testes (12 etiquetas, nos dois sentidos)
+        run: npm test
+
+      - name: Validar manifest e defaults.json
+        run: npm run validate
+
+      - name: Conferir que o pacote monta
+        run: node scripts/build.mjs
+        # Sem CRX_PRIVATE_KEY aqui: o build gera os ZIPs e avisa que pulou o CRX.
+        # Assinar so acontece no release.
+
+      - name: Conferir que o site monta
+        run: node scripts/gerar-site.mjs

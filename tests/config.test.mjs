@@ -197,23 +197,37 @@ test('delta corrompido no storage cai no padrao em vez de vazar', () => {
   assert.equal(s.outputWidthMm, 120, 'o valor bom no meio dos ruins tem que sobreviver');
 });
 
-test('config/defaults.json e valido e nao muda nenhum comportamento hoje', () => {
+test('config/defaults.json seria aceito pelas maquinas', () => {
   const bruto = JSON.parse(fs.readFileSync(path.join(RAIZ, 'config', 'defaults.json'), 'utf8'));
   const v = CFG.validarRemoto(bruto);
 
   assert.equal(v.aplicavel, true, 'o defaults.json publicado seria ignorado pelas maquinas');
   assert.deepEqual(v.erros, [], 'o defaults.json publicado tem campo invalido: ' + v.erros.join(' | '));
-  assert.equal(v.killSwitch, false, 'o defaults.json foi commitado com o kill switch LIGADO');
   assert.ok(v.configVersion >= 1, 'configVersion precisa existir e ser >= 1');
+  assert.equal(typeof bruto.killSwitch, 'boolean', 'killSwitch precisa ser true ou false');
 
-  // Todo campo declarado no arquivo tem que bater com o embutido: enquanto o padrao da
-  // empresa for igual ao de fabrica, publicar este arquivo nao muda nada em maquina
-  // nenhuma. Quando um valor mudar de proposito, este teste avisa — e ai e so atualizar.
-  for (const [campo, valor] of Object.entries(v.campos)) {
-    assert.equal(valor, CFG.PADRAO[campo],
-      'config/defaults.json define ' + campo + ' = ' + JSON.stringify(valor) +
-      ', diferente do embutido ' + JSON.stringify(CFG.PADRAO[campo]) +
-      '. Se for de proposito, atualize este teste no mesmo commit.');
+  // De proposito NAO existe aqui um "killSwitch tem que ser false". O kill switch e
+  // acionado numa emergencia, com a operacao parada: um teste que reprovasse o commit
+  // impediria o Pages de publicar exatamente o arquivo que resolve a emergencia. O CI
+  // avisa em letras garrafais (scripts/validate.mjs) e deixa passar.
+});
+
+test('mudou um valor no defaults.json? entao a configVersion tem que subir', () => {
+  // Sem isso e facil ajustar a margem, dar merge, e passar uma hora sem entender por que
+  // nada mudou. A configVersion e o que aparece no item 9 do popup de cada maquina: e
+  // como o suporte confere, a distancia, se aquela maquina ja pegou o ajuste.
+  const bruto = JSON.parse(fs.readFileSync(path.join(RAIZ, 'config', 'defaults.json'), 'utf8'));
+  const v = CFG.validarRemoto(bruto);
+
+  const diferentes = Object.entries(v.campos)
+    .filter(([campo, valor]) => valor !== CFG.PADRAO[campo])
+    .map(([campo, valor]) => campo + ': ' + JSON.stringify(CFG.PADRAO[campo]) + ' -> ' + JSON.stringify(valor));
+
+  if (diferentes.length) {
+    assert.ok(v.configVersion > 1,
+      'config/defaults.json muda ' + diferentes.length + ' valor(es) em relacao ao embutido (' +
+      diferentes.join('; ') + ') mas a configVersion ainda e ' + v.configVersion +
+      '. Suba a configVersion no mesmo commit.');
   }
 });
 
