@@ -83,8 +83,10 @@ Em cada uma das 60, uma vez só. Leve num pendrive o arquivo `scripts/instalar.p
 3. O script libera a instalação, baixa a última versão e mostra na tela o que fazer.
 4. **Siga o que ele imprimiu.** Os passos 1 a 6 estão lá.
 5. **Não pule o "Permitir acesso a URLs de arquivo".**
-6. Abra a extensão e **troque a senha** (item 7). A de fábrica é `enviagora`.
-7. Imprima uma etiqueta de teste. E uma dos Correios.
+6. Imprima uma etiqueta de teste. E uma dos Correios.
+
+> Não há senha para trocar. A senha é a mesma nas 60 máquinas — `impressora-enviagora` —
+> e serve só para ninguém desligar a extensão sem querer.
 
 Vá marcando na [planilha de controle](#planilha-de-controle) no fim deste documento.
 
@@ -133,8 +135,7 @@ Bem mais simples que a trilha A:
 1. Abrir o link da loja.
 2. Clicar em **Usar no Chrome**.
 3. `chrome://extensions` → **Detalhes** → ligar **Permitir acesso a URLs de arquivo**.
-4. Abrir a extensão e **trocar a senha** (item 7).
-5. Imprimir uma etiqueta de teste. E uma dos Correios.
+4. Imprimir uma etiqueta de teste. E uma dos Correios.
 
 ### B4. Da segunda versão em diante
 
@@ -189,7 +190,7 @@ Se for urgente numa máquina específica, o operador pode abrir a extensão → 
 | O operador diz | O que é | O que fazer |
 |---|---|---|
 | "a etiqueta sai sem ajuste" | quase sempre é o `file://` | `chrome://extensions` → Detalhes → ligar "Permitir acesso a URLs de arquivo" |
-| "apareceu uma tarja **vermelha**" | alguém desligou nessa máquina | abrir a extensão e ligar de volta (vai pedir a senha) |
+| "apareceu uma tarja **vermelha**" | alguém desligou nessa máquina | abrir a extensão e ligar de volta (senha: `impressora-enviagora`) |
 | "apareceu uma tarja **laranja**" | pausa central, de propósito | não mexer; sai sozinha |
 | "a etiqueta sai cortada na borda" | faixa não imprimível da impressora | extensão → item 6 → margem de segurança de 0 para 1 ou 2 mm. **Não** mexer na dos Correios |
 | "o leitor dos Correios não bipa" | margem lateral demais | conferir se a margem dos Correios está em 1 mm |
@@ -203,16 +204,15 @@ Se for urgente numa máquina específica, o operador pode abrir a extensão → 
 Imprima e vá marcando. Máquina não marcada é máquina que ninguém conferiu.
 
 ```
-  #   Máquina          Instalou   file://   Senha    Teste     Correios   Quem / data
- ---  ---------------  --------  --------  -------  --------  ---------  --------------
-  1   ______________     [  ]      [  ]     [  ]      [  ]       [  ]     ____________
-  2   ______________     [  ]      [  ]     [  ]      [  ]       [  ]     ____________
-  3   ______________     [  ]      [  ]     [  ]      [  ]       [  ]     ____________
+  #   Máquina          Instalou   file://   Teste     Correios   Quem / data
+ ---  ---------------  --------  --------  --------  ---------  --------------
+  1   ______________     [  ]      [  ]      [  ]       [  ]     ____________
+  2   ______________     [  ]      [  ]      [  ]       [  ]     ____________
+  3   ______________     [  ]      [  ]      [  ]       [  ]     ____________
  ...
- 60   ______________     [  ]      [  ]     [  ]      [  ]       [  ]     ____________
+ 60   ______________     [  ]      [  ]      [  ]       [  ]     ____________
 
   file://  = "Permitir acesso a URLs de arquivo" ligado
-  Senha    = trocou a senha de fábrica no item 7
   Teste    = imprimiu uma etiqueta normal e saiu certa
   Correios = imprimiu uma dos Correios e o leitor bipou
 ```

@@ -82,22 +82,31 @@
   </header>
 
   <div class="cartao">
-    <a class="btn btn-principal" href="{{URL_ZIP}}">Baixar extensão (ZIP)</a>
-    <a class="btn btn-secundario" href="{{URL_CRX}}">Baixar CRX (instalação com atualização automática)</a>
-    <p class="legenda">Na dúvida, baixe o ZIP. É o caminho que funciona em qualquer máquina.</p>
+    <a class="btn btn-principal" href="{{URL_CRX}}">Instalar a extensão</a>
+    <p class="legenda">Depois de instalada, ela <strong>se atualiza sozinha</strong>. Você não precisa voltar aqui.</p>
   </div>
 
   <div class="cartao">
     <h2>Como instalar (5 minutos)</h2>
     <ol>
-      <li>Baixe o ZIP no botão verde e <strong>descompacte</strong> numa pasta que não vá ser apagada — por exemplo <code>C:\Impressora-Enviagora</code>.</li>
+      <li>Clique no botão verde. O arquivo <code>.crx</code> vai para a pasta de Downloads.</li>
       <li>No Chrome, abra <code>chrome://extensions</code>.</li>
       <li>Se já existir uma versão antiga da Impressora Enviagora, clique em <strong>Remover</strong>.</li>
       <li>Ligue o <strong>Modo do desenvolvedor</strong>, no canto superior direito.</li>
-      <li>Clique em <strong>Carregar sem compactação</strong> e escolha a pasta que você descompactou.</li>
+      <li><strong>Arraste o arquivo <code>.crx</code></strong> da pasta de Downloads para dentro dessa tela e confirme em <strong>Adicionar extensão</strong>.</li>
       <li>Na extensão que apareceu, clique em <strong>Detalhes</strong> e ligue <strong>Permitir acesso a URLs de arquivo</strong>.</li>
       <li>Recarregue a tela do sistema com <code>F5</code> e imprima uma etiqueta de teste.</li>
     </ol>
+
+    <div class="destaque">
+      <strong>No passo 1, o Chrome vai desconfiar do arquivo.</strong>
+      <p>Ele mostra algo como <em>“este tipo de arquivo pode danificar seu computador”</em> e deixa o download pela metade. Clique em <strong>Manter</strong> (ou <strong>Manter mesmo assim</strong>). Se você não clicar, o Chrome apaga o arquivo — e a instalação falha depois com <code>CRX_FILE_NOT_READABLE</code>, que quer dizer só isso: <strong>o arquivo não está mais lá</strong>.</p>
+    </div>
+
+    <div class="destaque">
+      <strong>No passo 5, arraste da pasta, não da barra de downloads.</strong>
+      <p>Abra a pasta <strong>Downloads</strong> no Explorador de Arquivos e arraste de lá. Arrastar direto da barrinha do Chrome falha com o mesmo <code>CRX_FILE_NOT_READABLE</code>.</p>
+    </div>
 
     <div class="destaque">
       <strong>O passo 6 é o que mais deixa gente na mão.</strong>
@@ -106,12 +115,28 @@
   </div>
 
   <div class="cartao">
+    <h2>Ela se atualiza sozinha?</h2>
+    <p class="nota"><strong>Sim, se você instalou pelo botão verde acima.</strong> O Chrome confere sozinho, a cada poucas horas, se saiu versão nova, e instala sem perguntar nada. Correção publicada de manhã costuma estar em todas as máquinas até o fim do dia.</p>
+    <p class="nota">Os <strong>ajustes de configuração</strong> (margem, texto do cabeçalho) são ainda mais rápidos: chegam em até <strong>1 hora</strong>, e valem mesmo sem atualizar a extensão.</p>
+    <p class="nota">Para conferir numa máquina: abra a extensão e veja o item 9. Ele mostra a versão da configuração e quando ela foi baixada.</p>
+  </div>
+
+  <div class="cartao">
     <h2>Deu problema?</h2>
     <p class="nota"><strong>A etiqueta saiu sem ajuste.</strong> Confira o passo 6. Depois abra a extensão e veja se aparece alguma tarja no topo da tela do sistema.</p>
     <p class="nota"><strong>Apareceu uma tarja vermelha</strong> dizendo que a extensão está desligada: alguém desligou nessa máquina. Abra a extensão e ligue de volta — vai pedir a senha.</p>
     <p class="nota"><strong>Apareceu uma tarja laranja</strong> dizendo que está pausada pela central: não mexa em nada. A pausa foi feita de propósito e sai sozinha.</p>
     <p class="nota"><strong>A etiqueta sai cortada na borda.</strong> Abra a extensão, item 6, e aumente a “margem de segurança” de 0 para 1 ou 2&nbsp;mm. Não mexa na margem dos Correios.</p>
+    <p class="nota"><strong><code>CRX_FILE_NOT_READABLE</code></strong>: o Chrome não achou o arquivo. Ou o download foi bloqueado (faltou clicar em <strong>Manter</strong>), ou você arrastou da barra de downloads em vez da pasta. Confira na pasta Downloads se o arquivo está lá com cerca de <strong>630 KB</strong> — se estiver menor ou não existir, baixe de novo e clique em Manter.</p>
+    <p class="nota"><strong>“Não é possível adicionar aplicativos, extensões e scripts de usuário deste site”</strong>: esta máquina ainda não foi preparada. Chame a TI — falta rodar o preparo, que leva 1 minuto e é feito uma vez só por máquina.</p>
   </div>
+
+  <details class="cartao">
+    <summary style="cursor:pointer;font-weight:700;font-size:15px">Não consegui instalar de jeito nenhum</summary>
+    <p class="nota">Existe um caminho alternativo, em ZIP, para o caso de o Chrome desta máquina recusar a instalação normal mesmo depois do preparo da TI.</p>
+    <p class="nota"><strong>Ele tem uma desvantagem séria: não se atualiza sozinho.</strong> Quem instalar por aqui vai precisar repetir o processo a cada correção. Use só se o botão verde não funcionar, e avise a TI.</p>
+    <p class="nota"><a href="{{URL_ZIP}}">Baixar o ZIP (sem atualização automática)</a> — descompacte numa pasta fixa, e em <code>chrome://extensions</code> use <strong>Carregar sem compactação</strong> apontando para ela. Os passos 6 e 7 acima continuam valendo.</p>
+  </details>
 
   <footer>
     Uso interno da Enviagora.<br>

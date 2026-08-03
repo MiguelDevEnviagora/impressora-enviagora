@@ -172,36 +172,6 @@ document.getElementById('senhaCancel').addEventListener('click', () => {
   pintarAviso();
 });
 
-// ── Trocar a senha ─────────────────────────────────────────────────────────
-document.getElementById('trocarSenha').addEventListener('click', async () => {
-  const st = document.getElementById('statusSenha');
-  const senhaAtual = document.getElementById('senhaAtual').value;
-  const senhaNova = document.getElementById('senhaNova').value;
-
-  if (String(senhaNova || '').trim().length < 4) {
-    st.style.color = '#b91c1c';
-    st.textContent = 'A nova senha precisa ter pelo menos 4 caracteres.';
-    return;
-  }
-  st.style.color = '#6b7280';
-  st.textContent = 'Alterando…';
-  try {
-    const r = await chrome.runtime.sendMessage({ action: 'trocarSenha', senhaAtual, senhaNova });
-    if (r && r.ok) {
-      st.style.color = '#047857';
-      st.textContent = 'Senha alterada.';
-      document.getElementById('senhaAtual').value = '';
-      document.getElementById('senhaNova').value = '';
-    } else {
-      st.style.color = '#b91c1c';
-      st.textContent = 'Senha atual incorreta.';
-    }
-  } catch (e) {
-    st.style.color = '#b91c1c';
-    st.textContent = 'Não consegui falar com a extensão.';
-  }
-});
-
 // ── Salvar (só o delta) ────────────────────────────────────────────────────
 document.getElementById('save').addEventListener('click', () => {
   const dados = readForm();

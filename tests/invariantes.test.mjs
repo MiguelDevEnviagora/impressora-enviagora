@@ -231,3 +231,64 @@ test('so o release.yml exige o CRX; o ci.yml roda o build sem a chave de proposi
   assert.doesNotMatch(ci, /EXIGIR_CRX/,
     'ci.yml passou a exigir o CRX, mas ele nao tem acesso ao secret');
 });
+
+test('a senha e unica e nao ha mais como troca-la pelo popup', () => {
+  // v16.35, a pedido da operacao: trocar senha maquina a maquina era mais um passo manual
+  // no rollout de 60, e senha diferente em cada uma vira chamado quando ninguem lembra.
+  const bg = lerSrc('background.js');
+  const popupJs = lerSrc('popup.js');
+  const popupHtml = lerSrc('popup.html');
+
+  const constante = bg.match(/const SENHA_PADRAO = '([^']+)'/);
+  assert.ok(constante, 'nao achei SENHA_PADRAO em background.js');
+  assert.equal(constante[1], 'impressora-enviagora');
+
+  // O caminho de troca sumiu dos tres arquivos — sobrar metade dele e pior que nada:
+  // um botao que chama um handler inexistente falha em silencio na frente do operador.
+  for (const [nome, src] of [['background.js', bg], ['popup.js', popupJs], ['popup.html', popupHtml]]) {
+    assert.doesNotMatch(src, /trocarSenha/, nome + ' ainda tem o caminho de trocar senha');
+  }
+  for (const orfao of ['senhaAtual', 'senhaNova', 'statusSenha']) {
+    assert.doesNotMatch(popupHtml, new RegExp('id="' + orfao + '"'), 'popup.html tem o campo orfao ' + orfao);
+    assert.doesNotMatch(popupJs, new RegExp("'" + orfao + "'"), 'popup.js ainda usa ' + orfao);
+  }
+
+  // O popup precisa mostrar a senha certa: se a constante mudar e o texto nao, o operador
+  // fica olhando para a senha errada na tela enquanto tenta desligar.
+  assert.match(popupHtml, /<b>impressora-enviagora<\/b>/,
+    'popup.html nao mostra a senha vigente, ou mostra outra');
+
+  // E o desbloqueio em si continua de pe.
+  assert.match(bg, /function senhaConfere\(senha\)/);
+  assert.match(bg, /action === 'destravar'/);
+  assert.match(bg, /desligamento sem senha — revertendo/);
+});
+
+test('os icones da marca existem nos quatro tamanhos, em PNG', () => {
+  const manifest = JSON.parse(lerSrc('manifest.json'));
+  for (const tamanho of ['16', '32', '48', '128']) {
+    const rel = manifest.icons?.[tamanho];
+    assert.ok(rel, 'falta o icone de ' + tamanho + 'px no manifest');
+    assert.match(rel, /\.png$/, 'o Chrome nao aceita SVG como icone de extensao');
+
+    const arquivo = path.join(SRC, rel);
+    assert.ok(fs.existsSync(arquivo), 'o manifest aponta para ' + rel + ', que nao existe');
+
+    // Confere no cabecalho do PNG que a imagem tem MESMO o tamanho que o manifest promete.
+    // Um icone de 16 gravado em 128 carrega sem erro e sai borrado na barra do Chrome.
+    const cab = fs.readFileSync(arquivo).subarray(0, 26);
+    assert.deepEqual([...cab.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], rel + ' nao e PNG');
+    assert.equal(cab.readUInt32BE(16), Number(tamanho), rel + ' tem largura diferente de ' + tamanho);
+    assert.equal(cab.readUInt32BE(20), Number(tamanho), rel + ' tem altura diferente de ' + tamanho);
+  }
+  assert.equal(fs.existsSync(path.join(SRC, 'icon.png')), false,
+    'o icone antigo voltou; os icones da marca vivem em src/icones/');
+});
+
+test('os icones usam as cores oficiais da marca', () => {
+  // Fundo Verde Profundo #16302A, seta Verde Neon #C5FF56 — regra do manual para fundo
+  // escuro. Se alguem regenerar com outra paleta, isto avisa.
+  const gerador = fs.readFileSync(path.join(RAIZ, 'scripts', 'gerar-icones.mjs'), 'utf8');
+  assert.match(gerador, /VERDE_PROFUNDO = \[0x16, 0x30, 0x2A\]/);
+  assert.match(gerador, /VERDE_NEON = \[0xC5, 0xFF, 0x56\]/);
+});

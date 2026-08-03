@@ -17,8 +17,19 @@ const processedFileTabs = new Set();
 const MARCA = 'ENVIAGORA_OK';
 
 // ── TRAVA POR SENHA ────────────────────────────────────────────────────────
-// Senha de fabrica. TROQUE pelo popup ("Alterar senha") depois de instalar.
-const SENHA_PADRAO = 'enviagora';
+// Senha unica da operacao, igual nas ~60 maquinas. NAO ha como troca-la pelo popup:
+// isso saiu na v16.35 a pedido da operacao, e o motivo e bom — trocar senha maquina a
+// maquina era mais um passo manual no rollout, e senha diferente em cada uma vira
+// chamado de suporte quando ninguem lembra qual e.
+//
+// O QUE ESTA TRAVA PROTEGE, HONESTAMENTE
+// Ela impede o desligamento POR DESCUIDO: ninguem desliga sem querer, e o background
+// desfaz desligamento feito por fora do popup. So isso, e ja e o que a operacao precisa.
+// Ela NAO e segredo: este repositorio e publico, entao a senha abaixo e legivel por
+// qualquer um — e, mesmo que nao fosse, qualquer operador abre a pasta da extensao e le.
+// Continua valendo o que sempre valeu: nenhuma extensao impede desativar em
+// chrome://extensions. Ver docs/ARQUITETURA.md.
+const SENHA_PADRAO = 'impressora-enviagora';
 // Janela, em ms, em que o desligamento fica liberado depois de a senha ser aceita
 // no popup. Fora dela qualquer tentativa de desligar e desfeita automaticamente.
 const JANELA_DESBLOQUEIO_MS = 60000;
@@ -77,56 +88,29 @@ chrome.runtime.onStartup.addListener(() => {
 agendarConfig();
 
 // ── TRAVA POR SENHA ────────────────────────────────────────────────────────
-// A senha nunca e guardada em texto: fica so o SHA-256 dela com um sal aleatorio.
-// O que a trava garante: ninguem desliga a extensao pelo popup sem a senha, e se
-// alguem forcar o desligamento por fora (console, storage), o background desfaz.
-// O que ela NAO garante: desativar/remover a extensao em chrome://extensions. Isso
-// so politica corporativa impede — esta documentado no README.
-
-function hexDe(buffer) {
-  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function hashSenha(senha, sal) {
-  const dados = new TextEncoder().encode(String(sal || '') + '::' + String(senha || ''));
-  return hexDe(await crypto.subtle.digest('SHA-256', dados));
-}
+// O que a trava garante: ninguem desliga a extensao pelo popup sem a senha, e se alguem
+// forcar o desligamento por fora (console, storage), o background desfaz sozinho.
+// O que ela NAO garante: desativar/remover a extensao em chrome://extensions. Isso so
+// politica corporativa impede — nenhuma extensao consegue.
+//
+// A partir da v16.35 a senha e uma constante unica da operacao e nao ha como troca-la
+// pelo popup. Ver o comentario longo em SENHA_PADRAO, no topo do arquivo.
 
 function lerTrava() {
   return new Promise((resolve) => {
-    chrome.storage.local.get({ lockSalt: null, lockHash: null, unlockUntil: 0 },
-      (i) => resolve(i || {}));
+    chrome.storage.local.get({ unlockUntil: 0 }, (i) => resolve(i || {}));
   });
 }
 
-// Garante que existe uma senha configurada. Na primeira execucao grava a de fabrica.
-async function garantirTrava() {
-  const t = await lerTrava();
-  if (t.lockSalt && t.lockHash) return t;
-  const sal = hexDe(crypto.getRandomValues(new Uint8Array(16)));
-  const hash = await hashSenha(SENHA_PADRAO, sal);
-  await new Promise(r => chrome.storage.local.set({ lockSalt: sal, lockHash: hash }, r));
-  console.log('[Enviagora] trava iniciada com a senha de fabrica — troque no popup.');
-  return { lockSalt: sal, lockHash: hash, unlockUntil: 0 };
-}
-
-async function senhaConfere(senha) {
-  const t = await garantirTrava();
-  return (await hashSenha(senha, t.lockSalt)) === t.lockHash;
+// A senha e uma constante publica, entao guardar hash com sal dela seria teatro: nao
+// protegeria de nada e daria a impressao errada de que protege. Comparacao direta, e o
+// comentario acima explicando o que a trava realmente faz.
+function senhaConfere(senha) {
+  return String(senha || '') === SENHA_PADRAO;
 }
 
 async function liberarDesligamento() {
   await new Promise(r => chrome.storage.local.set({ unlockUntil: Date.now() + JANELA_DESBLOQUEIO_MS }, r));
-}
-
-async function trocarSenha(senhaAtual, senhaNova) {
-  if (!(await senhaConfere(senhaAtual))) return false;
-  const nova = String(senhaNova || '').trim();
-  if (nova.length < 4) return false;
-  const sal = hexDe(crypto.getRandomValues(new Uint8Array(16)));
-  const hash = await hashSenha(nova, sal);
-  await new Promise(r => chrome.storage.local.set({ lockSalt: sal, lockHash: hash }, r));
-  return true;
 }
 
 // Vigia: se "enabled" virar false fora da janela liberada, volta para true.
@@ -159,7 +143,6 @@ chrome.storage.onChanged.addListener(async (mudancas, area) => {
  * O valor EFETIVO nao muda para ninguem nesta atualizacao.
  */
 chrome.runtime.onInstalled.addListener(() => {
-  garantirTrava();
   agendarConfig();
   self.EnviagoraConfig.atualizarRemoto();
 
@@ -239,15 +222,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // ── trava por senha (falado so pelo popup) ──
   if (msg && msg.action === 'destravar') {
     (async () => {
-      const ok = await senhaConfere(msg.senha);
+      const ok = senhaConfere(msg.senha);
       if (ok) await liberarDesligamento();
       sendResponse({ ok });
     })();
-    return true;
-  }
-
-  if (msg && msg.action === 'trocarSenha') {
-    (async () => sendResponse({ ok: await trocarSenha(msg.senhaAtual, msg.senhaNova) }))();
     return true;
   }
 

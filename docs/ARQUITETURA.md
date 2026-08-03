@@ -278,7 +278,7 @@ Permissão a mais é o que mais reprova extensão na revisão da Web Store, que 
 
 | permissão | por que é necessária |
 |---|---|
-| `storage` | configurações do operador, cache do config remoto, hash da senha da trava |
+| `storage` | configurações do operador, cache do config remoto, janela de desbloqueio da trava |
 | `alarms` | rebuscar o config remoto de hora em hora. **Sem ela a API não existe e o refresh falha em silêncio** |
 | `scripting` | injetar o motor (canvas/pdf.js) no frame do WMS — o único jeito de ter canvas ignorando a CSP do site |
 | `webNavigation` | detectar o PDF em blob e o PDF em aba própria no momento certo |
@@ -308,9 +308,18 @@ refatorar a lógica de impressão. Cada uma precisa de uma decisão explícita.
    `sigep`, `declaracao`, `romaneio`). Um relatório com "romaneio" no nome seria tratado
    como etiqueta e recortado em 100×150 mm.
 
-4. **A senha de fábrica é `enviagora`** e está no código. Ela só protege o botão de dentro
-   do popup; a trava não impede desativar em `chrome://extensions` — nenhuma extensão
-   impede. Trocar em cada máquina no primeiro acesso continua sendo parte do rollout.
+4. ~~A senha de fábrica está no código e precisa ser trocada máquina a máquina.~~
+   **Resolvido na v16.35, por decisão da operação:** a senha virou uma constante única
+   (`impressora-enviagora`) e o caminho de troca saiu do popup. O motivo é bom — trocar
+   senha em 60 máquinas era mais um passo manual no rollout, e senha diferente em cada
+   uma vira chamado de suporte quando ninguém lembra qual é.
+
+   O que isso custa, dito na cara: **o repositório é público, então a senha é legível por
+   qualquer um.** Ela nunca foi segredo de verdade (qualquer operador abre a pasta da
+   extensão e lê), e o que a trava realmente entrega continua igual: ninguém desliga a
+   extensão *sem querer*, e desligamento feito por fora do popup é revertido pelo
+   background. Para impedir um desligamento *deliberado*, só política corporativa —
+   nenhuma extensão consegue bloquear `chrome://extensions`.
 
 ---
 
@@ -328,12 +337,14 @@ src/
   content.js           Ponte hook ↔ background. Tarjas de aviso.
   viewer.js/.html      PDF em aba própria. Caminho do file://.
   popup.js/.html       Configurações, trava por senha, estado do config remoto.
+  icones/              Ícones da marca, gerados por scripts/gerar-icones.mjs.
 
 scripts/
   build.mjs            ZIP auto-hospedado + ZIP Web Store + CRX assinado. Determinístico.
   gerar-site.mjs       Monta _site/ para o Pages. NÃO precisa da chave privada.
   gerar-chave.mjs      Par RSA. Roda uma vez na vida do projeto.
   bump.mjs             Sobe a versão em package.json e manifest juntos.
+  gerar-icones.mjs     Ícones 16/32/48/128 a partir da marca. Sem dependência.
   validate.mjs         Confere manifest, defaults.json e chave antes de empacotar.
   instalar.ps1         Setup one-shot por máquina, como administrador.
   lib/zip.mjs          Escritor de ZIP, sem dependência.

@@ -59,6 +59,16 @@ anota(manifest.action?.default_popup);
 for (const cs of manifest.content_scripts || []) (cs.js || []).forEach(anota);
 for (const war of manifest.web_accessible_resources || []) (war.resources || []).forEach(anota);
 for (const icone of Object.values(manifest.icons || {})) anota(icone);
+for (const icone of Object.values(manifest.action?.default_icon || {})) anota(icone);
+
+// O Chrome NAO aceita SVG em icone de extensao — precisa ser raster. Um SVG aqui carrega
+// normalmente no manifest e o icone simplesmente nao aparece, sem erro em lugar nenhum.
+for (const [tamanho, arquivo] of Object.entries(manifest.icons || {})) {
+  if (!/\.png$/i.test(arquivo)) falha('o icone ' + tamanho + ' precisa ser PNG (o Chrome nao aceita SVG)');
+}
+for (const esperado of ['16', '32', '48', '128']) {
+  if (!manifest.icons?.[esperado]) avisa('sem icone de ' + esperado + 'px — o Chrome vai reescalar outro tamanho');
+}
 
 for (const arquivo of referenciados) {
   if (!fs.existsSync(path.join(SRC, arquivo))) {
