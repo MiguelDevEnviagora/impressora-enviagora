@@ -1,5 +1,5 @@
 <#
-  IMPRESSORA ENVIAGORA — preparo da maquina
+  IMPRESSORA ENVIAGORA - preparo da maquina
   ==========================================
 
   O QUE ESTE SCRIPT FAZ
@@ -17,7 +17,7 @@
 
     Force-install por politica (ExtensionInstallForcelist) resolveria a instalacao, mas
     extensao marcada como "Instalada por politica empresarial" PERDE o acesso a file://
-    a cada reinicio — e os operadores abrem PDF salvo no disco. Por isso nao usamos.
+    a cada reinicio - e os operadores abrem PDF salvo no disco. Por isso nao usamos.
 
   COMO RODAR
     Abra o PowerShell COMO ADMINISTRADOR (botao direito > Executar como administrador) e
@@ -25,14 +25,14 @@
 
       Set-ExecutionPolicy -Scope Process Bypass -Force
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-      Invoke-RestMethod https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+      Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
       & "$env:TEMP\instalar-enviagora.ps1"
 
     As duas primeiras linhas nao sao enfeite: sem a primeira o Windows recusa executar o
     script, e sem a segunda o PowerShell 5.1 nao consegue falar com o GitHub. Faltando
     qualquer uma delas, o erro que aparece nao aponta para a causa.
 
-  DEPOIS DE INSTALAR — conferir se a maquina ficou certa (nao precisa de administrador):
+  DEPOIS DE INSTALAR - conferir se a maquina ficou certa (nao precisa de administrador):
 
       & "$env:TEMP\instalar-enviagora.ps1" -Conferir
 
@@ -65,7 +65,7 @@ $ID_EXTENSAO = 'kigacgfagjemjheogplplhcneolndhan'
 $REPO        = 'Enviagora/impressora-enviagora'
 $PAGINA      = 'https://enviagora.github.io/impressora-enviagora/'
 
-# Onde a politica local mora. ExtensionInstallAllowlist libera SO esta extensao — nao
+# Onde a politica local mora. ExtensionInstallAllowlist libera SO esta extensao - nao
 # abrimos a maquina para extensao de fora da loja em geral; o id e a lista inteira.
 $chaveAllow  = 'HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallAllowlist'
 $chaveFontes = 'HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallSources'
@@ -78,12 +78,12 @@ function Titulo($texto) {
 }
 
 Write-Host ''
-Write-Host '  IMPRESSORA ENVIAGORA — preparo da maquina' -ForegroundColor Green
+Write-Host '  IMPRESSORA ENVIAGORA - preparo da maquina' -ForegroundColor Green
 Write-Host ''
 
-# ── Modo conferencia ─────────────────────────────────────────────────────────
+# -- Modo conferencia ------------------------------------------------------------
 # Responde "esta maquina esta certa?" sem depender de ninguem olhar tela por tela. Nao
-# escreve nada e nao precisa de administrador — da para rodar em qualquer maquina, a
+# escreve nada e nao precisa de administrador - da para rodar em qualquer maquina, a
 # qualquer momento, inclusive meses depois para achar a que ficou para tras.
 if ($Conferir) {
   Titulo 'Conferindo esta maquina'
@@ -114,9 +114,9 @@ if ($Conferir) {
         if ($ext) {
           $achou = $true
           $versao = $ext.manifest.version
-          Escrever "  [ok]    instalada no perfil '$($perfil.Name)' — versao $versao" 'Green'
+          Escrever "  [ok]    instalada no perfil '$($perfil.Name)' - versao $versao" 'Green'
 
-          # 3) o toggle de file:// — o passo que nenhum script consegue LIGAR, mas da
+          # 3) o toggle de file:// - o passo que nenhum script consegue LIGAR, mas da
           #    para ler. O nome da chave ja mudou entre versoes do Chrome, entao tentamos
           #    as tres conhecidas. NAO achar nenhuma nao e o mesmo que estar desligado:
           #    nesse caso dizemos que nao deu para confirmar, em vez de dar alarme falso.
@@ -150,14 +150,14 @@ if ($Conferir) {
   if ($problemas -eq 0) {
     Escrever '  Maquina OK. Ela vai receber as atualizacoes sozinha.' 'Green'
   } else {
-    Escrever "  $problemas ponto(s) pendente(s) — veja acima." 'Yellow'
+    Escrever "  $problemas ponto(s) pendente(s) - veja acima." 'Yellow'
   }
   Escrever '  (o Chrome precisa estar FECHADO para a leitura do perfil ser confiavel)' 'DarkGray'
   Write-Host ''
   exit $problemas
 }
 
-# ── 0. Administrador? ────────────────────────────────────────────────────────
+# -- 0. Administrador? ------------------------------------------------------------
 $identidade = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal  = New-Object Security.Principal.WindowsPrincipal($identidade)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -169,7 +169,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
   exit 1
 }
 
-# ── 1. Politica local ────────────────────────────────────────────────────────
+# -- 1. Politica local ------------------------------------------------------------
 Titulo 'Liberando a instalacao no registro do Windows'
 
 New-Item -Path $chaveAllow  -Force | Out-Null
@@ -198,7 +198,7 @@ if ($SomentePolitica) {
   exit 0
 }
 
-# ── 2. Baixar a ultima versao ────────────────────────────────────────────────
+# -- 2. Baixar a ultima versao ------------------------------------------------------------
 Titulo 'Baixando a ultima versao publicada'
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -210,7 +210,7 @@ try {
   Escrever '  Nao consegui falar com o GitHub.' 'Red'
   Escrever "  ($($_.Exception.Message))" 'DarkGray'
   Escrever ''
-  Escrever "  A politica JA foi aplicada — essa parte esta feita." 'Yellow'
+  Escrever "  A politica JA foi aplicada - essa parte esta feita." 'Yellow'
   Escrever "  Baixe a extensao na mao em: $PAGINA"
   Write-Host ''
   exit 1
@@ -241,10 +241,10 @@ if ($baixados.ContainsKey('zip')) {
   Escrever "  descompactado em: $pastaZip" 'Green'
 }
 
-# ── 3. O que so uma pessoa consegue fazer ────────────────────────────────────
+# -- 3. O que so uma pessoa consegue fazer ------------------------------------
 Write-Host ''
 Write-Host '  ================================================================' -ForegroundColor Yellow
-Write-Host '   AGORA E COM VOCE — uns 2 minutos' -ForegroundColor Yellow
+Write-Host '   AGORA E COM VOCE - uns 2 minutos' -ForegroundColor Yellow
 Write-Host '  ================================================================' -ForegroundColor Yellow
 Write-Host ''
 Write-Host '   0. FECHE O CHROME COMPLETAMENTE e abra de novo.' -ForegroundColor Yellow
@@ -262,7 +262,7 @@ if ($baixados.ContainsKey('crx')) {
   Escrever "         $(Split-Path -Leaf $baixados['crx'])" 'White'
   Escrever '      Confirme em "Adicionar extensao".'
   Write-Host ''
-  Escrever '      Arraste da PASTA, nao da barra de downloads do Chrome — arrastar da' 'DarkYellow'
+  Escrever '      Arraste da PASTA, nao da barra de downloads do Chrome - arrastar da' 'DarkYellow'
   Escrever '      barrinha falha com CRX_FILE_NOT_READABLE, que quer dizer apenas que o' 'DarkYellow'
   Escrever '      Chrome nao conseguiu abrir o arquivo.' 'DarkYellow'
   Write-Host ''
@@ -287,7 +287,7 @@ Write-Host ''
 if ($baixados.ContainsKey('zip')) {
   Escrever '   Plano B, so se o Chrome recusar o .crx mesmo depois do passo 0:' 'DarkGray'
   Escrever "   chrome://extensions > Carregar sem compactacao > $pastaZip" 'DarkGray'
-  Escrever '   Instalada assim ela NAO se atualiza sozinha — avise a TI se precisar usar.' 'DarkGray'
+  Escrever '   Instalada assim ela NAO se atualiza sozinha - avise a TI se precisar usar.' 'DarkGray'
   Write-Host ''
 }
 
@@ -298,6 +298,6 @@ Write-Host ''
 # downloads do Chrome e o erro mais comum aqui, e da CRX_FILE_NOT_READABLE.
 try {
   Start-Process explorer.exe $Destino
-  Escrever '   (abri a pasta para voce — o arquivo a arrastar esta ali)' 'DarkGray'
+  Escrever '   (abri a pasta para voce - o arquivo a arrastar esta ali)' 'DarkGray'
   Write-Host ''
 } catch { }

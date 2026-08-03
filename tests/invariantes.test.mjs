@@ -331,3 +331,50 @@ test('a pagina nao oferece o ZIP como se fosse equivalente ao CRX', () => {
   assert.match(pagina, /não se atualiza sozinho/,
     'a pagina parou de avisar que o ZIP nao se atualiza sozinho');
 });
+
+test('os scripts PowerShell sao ASCII puro', () => {
+  // ISTO JA QUEBROU DE VERDADE, e o modo de falha e traicoeiro.
+  //
+  // O PowerShell 5.1 le um .ps1 SEM BOM como Windows-1252, nao como UTF-8. Um em-dash
+  // "-" (U+2014 = E2 80 94) vira tres caracteres, e o byte 0x94 em CP1252 e a ASPA CURVA
+  // DE FECHAMENTO — que o PowerShell aceita como delimitador de string. Dentro de uma
+  // string de aspas duplas, ela FECHA a string ali: o resto da linha vira codigo, a
+  // proxima aspa abre outra string, e o parser engole as chaves.
+  //
+  // O erro que aparece na tela nao tem nenhuma relacao com a causa: aponta um
+  // "MissingEndCurlyBrace" dezenas de linhas antes. Ninguem acha isso olhando o codigo,
+  // porque no editor o arquivo esta perfeito.
+  //
+  // ASCII puro fecha a porta inteira: nao depende de BOM sobreviver ao download, nem da
+  // versao do PowerShell, nem do idioma do Windows.
+  for (const arquivo of fs.readdirSync(path.join(RAIZ, 'scripts')).filter((f) => f.endsWith('.ps1'))) {
+    const texto = fs.readFileSync(path.join(RAIZ, 'scripts', arquivo), 'utf8');
+    const ruins = [];
+    texto.split('\n').forEach((linha, i) => {
+      for (const ch of linha) {
+        if (ch.codePointAt(0) > 127) {
+          ruins.push('linha ' + (i + 1) + ': ' + JSON.stringify(ch) +
+                     ' (U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') + ')');
+          break;
+        }
+      }
+    });
+    assert.deepEqual(ruins, [],
+      arquivo + ' tem caractere nao-ASCII. Troque por ASCII: acentos pela letra base, ' +
+      '"-" por "-", "..." por "...". Ver o comentario acima para o porque.');
+  }
+});
+
+test('o comando de instalacao usa Invoke-WebRequest para baixar o script', () => {
+  // Invoke-RestMethod interpreta a resposta (JSON/XML) antes de gravar; para baixar um
+  // arquivo, quem grava os bytes crus e o Invoke-WebRequest. Com o script em ASCII a
+  // diferenca fica academica, mas usar a ferramenta certa custa nada.
+  for (const doc of ['site/index.html', 'docs/ROLLOUT.md', 'docs/PILOTO.md']) {
+    const texto = fs.readFileSync(path.join(RAIZ, doc), 'utf8');
+    if (!texto.includes('instalar.ps1')) continue;
+    assert.doesNotMatch(texto, /Invoke-RestMethod\s+https:\/\/raw\.githubusercontent/,
+      doc + ' ainda baixa o script com Invoke-RestMethod');
+    assert.match(texto, /Invoke-WebRequest -UseBasicParsing https:\/\/raw\.githubusercontent/,
+      doc + ' precisa baixar o script com Invoke-WebRequest -UseBasicParsing');
+  }
+});

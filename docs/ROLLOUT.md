@@ -85,7 +85,7 @@ Em cada uma das 60, uma vez só. **Não precisa de pendrive** — o comando baix
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-RestMethod https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
 & "$env:TEMP\instalar-enviagora.ps1"
 ```
 
