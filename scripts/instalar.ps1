@@ -147,29 +147,50 @@ if ($baixados.ContainsKey('zip')) {
 # ── 3. O que so uma pessoa consegue fazer ────────────────────────────────────
 Write-Host ''
 Write-Host '  ================================================================' -ForegroundColor Yellow
-Write-Host '   AGORA E COM VOCE — 5 passos, uns 2 minutos' -ForegroundColor Yellow
+Write-Host '   AGORA E COM VOCE — uns 2 minutos' -ForegroundColor Yellow
 Write-Host '  ================================================================' -ForegroundColor Yellow
 Write-Host ''
-Escrever '   1. Abra o Chrome em:  chrome://extensions'
-Escrever '   2. Se ja existir uma Impressora Enviagora antiga, clique em REMOVER.'
-Escrever '   3. Ligue o "Modo do desenvolvedor" (canto superior direito).'
-Escrever '   4. Clique em "Carregar sem compactacao" e escolha esta pasta:'
-Escrever "         $pastaZip" 'White'
-Write-Host ''
-Write-Host '   5. Clique em DETALHES na extensao e ligue:' -ForegroundColor Yellow
-Write-Host '         "Permitir acesso a URLs de arquivo"' -ForegroundColor White
-Write-Host ''
-Escrever '      Este passo 5 e o que mais deixa gente na mao. Sem ele, etiqueta salva' 'DarkYellow'
-Escrever '      no computador sai SEM ajuste. Nao existe jeito de automatizar: o Chrome' 'DarkYellow'
-Escrever '      nao oferece API nenhuma para esse botao.' 'DarkYellow'
-Write-Host ''
-Escrever '   6. Recarregue a tela do sistema com F5 e imprima uma etiqueta de teste.'
+Write-Host '   0. FECHE O CHROME COMPLETAMENTE e abra de novo.' -ForegroundColor Yellow
+Escrever '      A liberacao no registro so passa a valer quando o Chrome reinicia.' 'DarkYellow'
+Escrever '      Pulando este passo, a instalacao e recusada e parece que o script falhou.' 'DarkYellow'
 Write-Host ''
 
 if ($baixados.ContainsKey('crx')) {
-  Escrever '   Para instalar COM atualizacao automatica (se o piloto aprovou esse caminho):' 'DarkGray'
-  Escrever "   arraste $($baixados['crx'])" 'DarkGray'
-  Escrever '   para a janela do chrome://extensions, com o Modo do desenvolvedor ligado.' 'DarkGray'
+  Escrever '   1. Abra o Chrome em:  chrome://extensions'
+  Escrever '   2. Se ja existir uma Impressora Enviagora antiga, clique em REMOVER.'
+  Escrever '   3. Ligue o "Modo do desenvolvedor" (canto superior direito).'
+  Escrever '   4. Abra o Explorador de Arquivos nesta pasta:'
+  Escrever "         $Destino" 'White'
+  Escrever '      e ARRASTE este arquivo para dentro da janela do chrome://extensions:'
+  Escrever "         $(Split-Path -Leaf $baixados['crx'])" 'White'
+  Escrever '      Confirme em "Adicionar extensao".'
+  Write-Host ''
+  Escrever '      Arraste da PASTA, nao da barra de downloads do Chrome — arrastar da' 'DarkYellow'
+  Escrever '      barrinha falha com CRX_FILE_NOT_READABLE, que quer dizer apenas que o' 'DarkYellow'
+  Escrever '      Chrome nao conseguiu abrir o arquivo.' 'DarkYellow'
+  Write-Host ''
+  Write-Host '   5. Clique em DETALHES na extensao e ligue:' -ForegroundColor Yellow
+  Write-Host '         "Permitir acesso a URLs de arquivo"' -ForegroundColor White
+  Write-Host ''
+  Escrever '      Este passo e o que mais deixa gente na mao. Sem ele, etiqueta salva no' 'DarkYellow'
+  Escrever '      computador sai SEM ajuste. Nao existe jeito de automatizar: o Chrome nao' 'DarkYellow'
+  Escrever '      oferece API nenhuma para esse botao.' 'DarkYellow'
+  Write-Host ''
+  Escrever '   6. Recarregue a tela do sistema com F5 e imprima uma etiqueta de teste.'
+  Write-Host ''
+  Escrever '   INSTALANDO ASSIM, ELA SE ATUALIZA SOZINHA daqui para a frente.' 'Green'
+} else {
+  Escrever '   O .crx nao veio neste release. Instale pela pasta descompactada:' 'Yellow'
+  Escrever "         $pastaZip" 'White'
+  Escrever '   chrome://extensions > Modo do desenvolvedor > Carregar sem compactacao.'
+  Escrever '   ATENCAO: instalada assim, ela NAO se atualiza sozinha.' 'Yellow'
+}
+
+Write-Host ''
+if ($baixados.ContainsKey('zip')) {
+  Escrever '   Plano B, so se o Chrome recusar o .crx mesmo depois do passo 0:' 'DarkGray'
+  Escrever "   chrome://extensions > Carregar sem compactacao > $pastaZip" 'DarkGray'
+  Escrever '   Instalada assim ela NAO se atualiza sozinha — avise a TI se precisar usar.' 'DarkGray'
   Write-Host ''
 }
 
