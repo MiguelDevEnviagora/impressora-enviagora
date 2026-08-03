@@ -1,34 +1,39 @@
-# Piloto — 2 máquinas, antes de qualquer rollout
+# Piloto — 2 máquinas, antes de repetir 60 vezes
 
-Existe **uma incerteza que só o teste resolve**, e ela decide qual dos dois caminhos de
-distribuição a Enviagora vai seguir. Este documento é para descobrir isso em duas máquinas
-em vez de descobrir em sessenta.
+**O caminho já está escolhido: auto-hospedado.** A Chrome Web Store leva de horas a dias
+para revisar cada atualização, e isso é incompatível com corrigir uma etiqueta errada no
+meio do turno.
 
-Não continue para o [ROLLOUT.md](ROLLOUT.md) antes de terminar aqui.
+Este documento não decide mais nada. Ele confirma, em duas máquinas, que o caminho
+escolhido funciona no galpão de vocês — antes de alguém repetir o processo sessenta vezes
+e descobrir o problema na máquina 37.
+
+Depois daqui, vá para o [ROLLOUT.md](ROLLOUT.md).
 
 ---
 
-## A pergunta
+## A pergunta que sobra
 
-> O Chrome dessas máquinas aceita instalar um CRX auto-hospedado usando política local de
+> O Chrome dessas máquinas aceita instalar o CRX auto-hospedado com a política local de
 > registro (`ExtensionInstallSources` + `ExtensionInstallAllowlist`), **sem** inscrição no
 > Chrome Enterprise Core — e o toggle "Permitir acesso a URLs de arquivo" **fica ligado e
 > persiste** depois de reiniciar o Chrome?
 
-Pode funcionar. Pode ser bloqueado, dependendo da versão do Chrome e do estado da máquina.
-Ninguém consegue responder isso lendo documentação: as duas coisas mudaram de comportamento
-mais de uma vez nos últimos anos.
+### Por que o risco é menor do que parece
 
-### Por que a pergunta é essa e não outra
+Existe um bug conhecido e aberto do Chromium (issues 40159841 e 40300638): extensão
+**instalada por política** — a que aparece como "Instalada por política empresarial",
+via `ExtensionInstallForcelist` — **não mantém** o acesso a `file://` entre reinícios.
+É por isso que force-install está descartado, e os operadores precisam de `file://`:
+eles abrem PDFs salvos no disco.
 
-Force-install (`ExtensionInstallForcelist`) está **descartado** e não deve ser proposto:
-extensão marcada como "Instalada por política empresarial" **não mantém** o acesso a
-`file://`, e o checkbox não persiste entre reinícios. É limitação conhecida e aberta do
-Chromium (issues 40159841 e 40300638). E os operadores **precisam** de `file://`: eles
-abrem PDFs salvos no disco.
+**Não é o nosso caso.** A política que usamos apenas *permite* a instalação; quem instala é
+a pessoa, arrastando o arquivo. A extensão fica registrada como instalação normal de
+usuário — não aparece como "instalada por política" — e o toggle se comporta como em
+qualquer outra extensão.
 
-Ou seja: o que estamos testando é o caminho que **permite** a instalação sem force-install,
-mantendo o toggle nas mãos de quem instala.
+Ou seja: a expectativa é que funcione. O passo 4 abaixo existe para **confirmar**, não
+porque haja motivo forte para duvidar.
 
 ---
 
@@ -56,22 +61,27 @@ mantendo o toggle nas mãos de quem instala.
 
 ## O teste
 
-### Passo 1 — rodar o instalador
+### Passo 1 — rodar o preparo
 
-Na máquina A, com o **PowerShell como administrador**:
+Na máquina A: Botão Iniciar → digite `powershell` → botão direito em **Windows PowerShell**
+→ **Executar como administrador**. Cole o bloco inteiro:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
-.\instalar.ps1
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-RestMethod https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+& "$env:TEMP\instalar-enviagora.ps1"
 ```
 
-O script aplica a política local, baixa a última versão e imprime na tela o que falta
-fazer. Ele é idempotente: rodar duas vezes não quebra nada.
+O script aplica a política local, baixa a última versão, abre a pasta e imprime o que falta
+fazer. É idempotente: rodar duas vezes não quebra nada.
+
+**Feche o Chrome por completo e abra de novo** — a política só passa a valer depois disso.
 
 ### Passo 2 — instalar o CRX
 
-Siga o que o script imprimiu. Ele vai pedir para arrastar o arquivo `.crx` para a janela
-`chrome://extensions` com o Modo do desenvolvedor ligado.
+`chrome://extensions` → **Modo do desenvolvedor** ligado → arraste o `.crx` **da pasta**
+`C:\Impressora-Enviagora` (não da barra de downloads) para dentro da janela.
 
 **Anote o que aconteceu**, palavra por palavra se der erro:
 
@@ -97,6 +107,14 @@ URLs de arquivo**.
 
 - [ ] **"Permitir acesso a URLs de arquivo" continua LIGADO**
 
+### Passo 4b — o diagnóstico automático concorda?
+
+```powershell
+& "$env:TEMP\instalar-enviagora.ps1" -Conferir
+```
+
+- [ ] as três linhas saem em verde (política, extensão instalada, `file://` ligado)
+
 ### Passo 5 — funciona de verdade?
 
 1. Salve um PDF de etiqueta no disco e abra com duplo clique.
@@ -121,25 +139,26 @@ Sem pular passos. É comum a A funcionar e a B não.
 Critério: **instalou, e o toggle de `file://` continua ligado depois de reiniciar** (passo
 4), e os passos 5.1 a 5.4 passaram.
 
-→ **Siga a trilha A do [ROLLOUT.md](ROLLOUT.md): auto-hospedado.**
-
-O que você ganha: atualização instantânea, sem revisão de ninguém. Publicar uma correção é
-`git tag` e esperar as máquinas pegarem sozinhas.
+→ **Siga o [ROLLOUT.md](ROLLOUT.md) nas 60.** Publicar uma correção passa a ser `git tag`,
+e as máquinas pegam sozinhas em algumas horas.
 
 ### ⚠️ Funcionou numa e na outra não
 
-Não é empate — é resposta. Descubra o que difere (versão do Chrome, Home vs Pro, antivírus,
-usuário sem direito de administrador) e anote. Se a diferença for algo que existe em boa
-parte do galpão, trate como "bloqueou".
+Não é empate — é pista. Descubra o que difere (versão do Chrome, Home vs Pro, antivírus,
+usuário sem direito de administrador) e anote. Muitas vezes é algo pontual e contornável
+naquela máquina.
 
-Na dúvida, **trate como bloqueou**. O plano B funciona nas duas.
+Se a diferença for algo que existe em boa parte do galpão, pare e fale com o Rafael antes
+de seguir para as 60.
 
 ### ❌ Bloqueou
 
 Critério: não instalou, **ou** instalou mas o toggle de `file://` voltou desligado depois
 de reiniciar.
 
-→ **Siga a trilha B do [ROLLOUT.md](ROLLOUT.md): Chrome Web Store "não listada".**
+→ **Único caso em que vale reabrir a decisão:** o plano B do [ROLLOUT.md](ROLLOUT.md),
+Chrome Web Store "não listada". Avise o Rafael antes — ele descartou esse caminho de
+propósito, por causa do tempo de revisão, e a escolha é dele.
 
 - US$ 5, uma vez na vida
 - auto-update nativo, zero configuração nas máquinas
@@ -175,7 +194,7 @@ MÁQUINA B ______________  Chrome ________  Windows: Home / Pro
   passo 4 (toggle persistiu)  [ ] sim  [ ] não
   passo 5 (imprimiu certo)    [ ] sim  [ ] não
 
-DECISÃO:  [ ] Trilha A — auto-hospedado     [ ] Trilha B — Web Store não listada
+RESULTADO:  [ ] Confirmado, seguir para as 60     [ ] Travou — falar com o Rafael
 
 Observações: ____________________________________________________________
 ```

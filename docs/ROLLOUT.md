@@ -3,15 +3,20 @@
 Este documento é para ser executado por alguém que **não é da tecnologia**. Se em algum
 ponto você travar, pare e chame quem mantém o repositório: não improvise.
 
-**Antes de começar, o [PILOTO.md](PILOTO.md) precisa estar feito.** Ele testa em 2 máquinas
-qual das duas trilhas abaixo funciona no galpão. Sem isso você vai descobrir o problema na
-máquina 37.
+**A decisão já foi tomada: auto-hospedado.** O motivo é operacional e não se discute — a
+Chrome Web Store leva de horas a dias para revisar cada atualização, e isso é incompatível
+com corrigir uma etiqueta errada no meio do turno. Aqui a correção vale em minutos.
+
+**Antes de começar, faça o [PILOTO.md](PILOTO.md) em 2 máquinas.** Ele não decide mais nada
+— só confirma que o caminho funciona no galpão de vocês antes de você repetir 60 vezes.
 
 ---
 
 ## Antes de tudo — 3 coisas que só o Rafael faz, uma vez
 
-Sem elas nada aqui funciona. São 5 minutos no site do GitHub.
+> **Estas três já estão feitas.** Ficam registradas aqui porque, se um dia alguém precisar
+> refazer o projeto do zero — ou entender por que o repositório é público — a resposta é
+> esta seção.
 
 ### 1. Deixar o repositório público
 
@@ -49,56 +54,85 @@ O arquivo `chave-privada.pem` foi gerado uma vez e **não está no repositório 
 
 ---
 
-## Trilha A — auto-hospedado
+## O caminho — auto-hospedado
 
-**Use esta trilha se o piloto deu ✅.**
+Atualização em minutos, sem revisão de ninguém, sem custo.
 
-Atualização instantânea, sem revisão de ninguém, sem custo.
-
-### A1. Publicar a primeira versão
-
-Quem mantém o repositório roda, na pasta do projeto:
+### 1. Publicar (só quem mantém o repositório, uma vez por versão)
 
 ```bash
-npm test              # as 12 etiquetas precisam passar
-git tag v16.34.0
+npm test                        # as 12 etiquetas precisam passar
+npm run bump -- patch           # ou minor / major
+git commit -am "v16.35.1: <o que muda para a operação>"
+git tag v16.35.1
 git push origin main --tags
 ```
 
-Pronto. O robô do GitHub cuida do resto: testa, assina, publica o Release e sobe a página.
-Acompanhe em **Actions** — quando ficar verde, está no ar.
+O robô do GitHub faz o resto: testa, assina, publica o Release e sobe a página. Acompanhe
+em **Actions** — quando ficar verde, está no ar.
 
 Confira abrindo: **https://enviagora.github.io/impressora-enviagora/**
 
-### A2. Preparar cada máquina
+### 2. Preparar cada máquina
 
-Em cada uma das 60, uma vez só. Leve num pendrive o arquivo `scripts/instalar.ps1`.
+Em cada uma das 60, uma vez só. **Não precisa de pendrive** — o comando baixa tudo.
 
-1. Botão direito no **PowerShell** → **Executar como administrador**
-2. Digite:
-   ```powershell
-   Set-ExecutionPolicy -Scope Process Bypass -Force
-   .\instalar.ps1
-   ```
-3. O script libera a instalação, baixa a última versão e mostra na tela o que fazer.
-4. **Siga o que ele imprimiu.** Os passos 1 a 6 estão lá.
-5. **Não pule o "Permitir acesso a URLs de arquivo".**
-6. Imprima uma etiqueta de teste. E uma dos Correios.
+**a)** Botão Iniciar → digite `powershell` → botão direito em **Windows PowerShell** →
+**Executar como administrador**.
+
+**b)** Cole o bloco **inteiro** e aperte Enter:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-RestMethod https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+& "$env:TEMP\instalar-enviagora.ps1"
+```
+
+> As duas primeiras linhas não são enfeite. Sem a primeira o Windows recusa executar o
+> script; sem a segunda o PowerShell 5.1 não consegue falar com o GitHub. Faltando
+> qualquer uma, o erro que aparece **não aponta para a causa**.
+
+**c)** **Feche o Chrome por completo e abra de novo.** A liberação só passa a valer depois
+disso. Pular este passo faz a instalação ser recusada e parecer que o script falhou.
+
+**d)** `chrome://extensions` → remover versão antiga se houver → ligar **Modo do
+desenvolvedor** → **arrastar o `.crx`** da pasta que o script abriu (`C:\Impressora-Enviagora`).
+
+> Arraste **da pasta**, nunca da barra de downloads do Chrome. Da barrinha falha com
+> `CRX_FILE_NOT_READABLE`, que quer dizer só "não achei o arquivo".
+
+**e)** **Detalhes** → ligar **Permitir acesso a URLs de arquivo**. Este é o passo que
+nenhum script consegue dar, e o que mais deixa gente na mão.
+
+**f)** Conferir se ficou tudo certo (não precisa de administrador):
+
+```powershell
+& "$env:TEMP\instalar-enviagora.ps1" -Conferir
+```
+
+Ele responde em três linhas: política aplicada? extensão instalada e em que versão? o
+`file://` está ligado? Serve também meses depois, para achar a máquina que ficou para trás
+sem olhar tela por tela.
+
+**g)** `F5` na tela do sistema e imprima uma etiqueta de teste. E uma dos Correios.
 
 > Não há senha para trocar. A senha é a mesma nas 60 máquinas — `impressora-enviagora` —
 > e serve só para ninguém desligar a extensão sem querer.
 
 Vá marcando na [planilha de controle](#planilha-de-controle) no fim deste documento.
 
-### A3. Da segunda versão em diante
+### 3. Da segunda versão em diante
 
-Nada. As máquinas atualizam sozinhas em algumas horas.
+**Nada.** As máquinas atualizam sozinhas em algumas horas. Você não volta nelas.
 
 ---
 
-## Trilha B — Chrome Web Store "não listada"
+## Plano B — Chrome Web Store "não listada"
 
-**Use esta trilha se o piloto deu ❌.**
+**Só se o piloto mostrar que o caminho acima não funciona nessas máquinas.** A desvantagem
+que fez ele ser preterido continua valendo: cada atualização espera revisão do Google, de
+horas a dias.
 
 Custa US$ 5 uma vez. Em troca: auto-update nativo, zero configuração nas máquinas, e como a
 instalação é normal, o "Permitir acesso a URLs de arquivo" funciona e persiste.
@@ -109,14 +143,14 @@ O preço é a revisão do Google a cada atualização — horas a dias.
 > logo abaixo: margem, texto de cabeçalho e a parada de emergência valem em **1 hora** sem
 > passar por revisão nenhuma. Só mudança de lógica precisa de versão nova.
 
-### B1. Criar a conta de desenvolvedor
+### 1. Criar a conta de desenvolvedor
 
 1. https://chrome.google.com/webstore/devconsole
 2. Entrar com uma conta **da empresa**, não pessoal — quem sair da empresa não pode levar a
    extensão junto.
 3. Pagar os US$ 5 (uma vez, para sempre).
 
-### B2. Enviar a extensão
+### 2. Enviar a extensão
 
 1. Baixe o arquivo `impressora-enviagora-<versão>-webstore.zip` do Release mais recente.
    **É esse mesmo, o que termina em `-webstore`.** O outro ZIP tem configuração de
@@ -128,23 +162,23 @@ O preço é a revisão do Google a cada atualização — horas a dias.
 5. Enviar para revisão.
 6. Quando aprovar, guarde o link. **É esse link que vai para a operação.**
 
-### B3. Preparar cada máquina
+### 3. Preparar cada máquina
 
-Bem mais simples que a trilha A:
+Bem mais simples que o caminho auto-hospedado:
 
 1. Abrir o link da loja.
 2. Clicar em **Usar no Chrome**.
 3. `chrome://extensions` → **Detalhes** → ligar **Permitir acesso a URLs de arquivo**.
 4. Imprimir uma etiqueta de teste. E uma dos Correios.
 
-### B4. Da segunda versão em diante
+### 4. Da segunda versão em diante
 
 Subir o novo `-webstore.zip` no console e esperar a revisão. As máquinas atualizam sozinhas
 depois que o Google aprovar.
 
 ---
 
-## Mudar uma configuração (as duas trilhas)
+## Mudar uma configuração
 
 **Este é o caminho que você mais vai usar.** Serve para margem, texto do cabeçalho, escala,
 deslocamento — qualquer parâmetro. **Não** publica versão nova e **não** passa por revisão.
@@ -194,7 +228,9 @@ Se for urgente numa máquina específica, o operador pode abrir a extensão → 
 | "apareceu uma tarja **laranja**" | pausa central, de propósito | não mexer; sai sozinha |
 | "a etiqueta sai cortada na borda" | faixa não imprimível da impressora | extensão → item 6 → margem de segurança de 0 para 1 ou 2 mm. **Não** mexer na dos Correios |
 | "o leitor dos Correios não bipa" | margem lateral demais | conferir se a margem dos Correios está em 1 mm |
-| "não atualiza" | Pages ou Release | conferir se o repositório está público e se o último Actions ficou verde |
+| "não atualiza" | Pages, Release, ou instalou pelo ZIP | rode `-Conferir` nessa máquina; depois confira se o último Actions ficou verde |
+| "CRX_FILE_NOT_READABLE" | o Chrome não achou o arquivo | arraste da pasta, não da barra de downloads; confira se o arquivo tem ~630 KB |
+| "não é possível adicionar extensões deste site" | falta a política, ou o Chrome não foi reiniciado | rode o preparo como administrador e **feche e reabra o Chrome** |
 | "sai errado só de vez em quando" | pode ser máquina desatualizada | extensão → item 9 → conferir a `configVersion` e comparar com as outras |
 
 ---

@@ -28,6 +28,7 @@ npm test              # 63 testes, incluindo as 12 etiquetas reais. Sem navegado
 npm run validate      # confere manifest, defaults.json e chave antes de publicar
 npm run build         # gera ZIP, ZIP-webstore e CRX assinado em dist/
 npm run bump          # sobe a versão em package.json e manifest juntos
+npm run chave         # gera o par de assinatura — RODA UMA VEZ NA VIDA DO PROJETO
 ```
 
 Sem `npm install`: o projeto **não tem dependência** de runtime nem de build. ZIP, CRX e
@@ -97,7 +98,10 @@ Quatro correções custaram caro e estão travadas por teste. Se um teste de
 
 ## Estado atual
 
-- **Versão:** 16.34.0
+- **Distribuição:** auto-hospedada (CRX assinado + `update_url` no GitHub Pages). A Chrome
+  Web Store foi descartada de propósito: a revisão do Google, de horas a dias por
+  atualização, é incompatível com corrigir etiqueta errada no meio do turno.
+- **Versão:** 16.35.0
 - **ID da extensão:** `kigacgfagjemjheogplplhcneolndhan`
 - **Repositório:** precisa ser **público** — o Chrome não autentica ao procurar
   atualização, então não existe auto-update a partir de repositório privado

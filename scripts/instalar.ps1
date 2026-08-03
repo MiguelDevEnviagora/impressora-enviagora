@@ -19,9 +19,26 @@
     extensao marcada como "Instalada por politica empresarial" PERDE o acesso a file://
     a cada reinicio — e os operadores abrem PDF salvo no disco. Por isso nao usamos.
 
-  COMO RODAR (PowerShell como ADMINISTRADOR)
+  COMO RODAR
+    Abra o PowerShell COMO ADMINISTRADOR (botao direito > Executar como administrador) e
+    cole o bloco inteiro. Ele baixa este script e executa:
+
       Set-ExecutionPolicy -Scope Process Bypass -Force
-      .\instalar.ps1
+      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+      Invoke-RestMethod https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+      & "$env:TEMP\instalar-enviagora.ps1"
+
+    As duas primeiras linhas nao sao enfeite: sem a primeira o Windows recusa executar o
+    script, e sem a segunda o PowerShell 5.1 nao consegue falar com o GitHub. Faltando
+    qualquer uma delas, o erro que aparece nao aponta para a causa.
+
+  DEPOIS DE INSTALAR — conferir se a maquina ficou certa (nao precisa de administrador):
+
+      & "$env:TEMP\instalar-enviagora.ps1" -Conferir
+
+    Responde em 3 linhas: politica aplicada? extensao instalada e em que versao? o
+    "Permitir acesso a URLs de arquivo" esta ligado? Serve tambem meses depois, para
+    achar a maquina que ficou para tras sem precisar olhar tela por tela.
 
   E idempotente: rodar de novo nao duplica nada e nao quebra nada.
 #>
@@ -32,7 +49,11 @@ param(
   [string] $Destino = 'C:\Impressora-Enviagora',
 
   # Use -SomentePolitica para so aplicar o registro, sem baixar nada.
-  [switch] $SomentePolitica
+  [switch] $SomentePolitica,
+
+  # Use -Conferir para so DIAGNOSTICAR uma maquina ja instalada, sem mexer em nada.
+  # Nao precisa de administrador.
+  [switch] $Conferir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,6 +65,11 @@ $ID_EXTENSAO = 'kigacgfagjemjheogplplhcneolndhan'
 $REPO        = 'Enviagora/impressora-enviagora'
 $PAGINA      = 'https://enviagora.github.io/impressora-enviagora/'
 
+# Onde a politica local mora. ExtensionInstallAllowlist libera SO esta extensao — nao
+# abrimos a maquina para extensao de fora da loja em geral; o id e a lista inteira.
+$chaveAllow  = 'HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallAllowlist'
+$chaveFontes = 'HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallSources'
+
 function Escrever($texto, $cor = 'Gray') { Write-Host $texto -ForegroundColor $cor }
 function Titulo($texto) {
   Write-Host ''
@@ -54,6 +80,82 @@ function Titulo($texto) {
 Write-Host ''
 Write-Host '  IMPRESSORA ENVIAGORA — preparo da maquina' -ForegroundColor Green
 Write-Host ''
+
+# ── Modo conferencia ─────────────────────────────────────────────────────────
+# Responde "esta maquina esta certa?" sem depender de ninguem olhar tela por tela. Nao
+# escreve nada e nao precisa de administrador — da para rodar em qualquer maquina, a
+# qualquer momento, inclusive meses depois para achar a que ficou para tras.
+if ($Conferir) {
+  Titulo 'Conferindo esta maquina'
+  $problemas = 0
+
+  # 1) a politica foi aplicada?
+  $liberado = $null
+  try { $liberado = (Get-ItemProperty -Path $chaveAllow -ErrorAction Stop).'1' } catch { }
+  if ($liberado -eq $ID_EXTENSAO) {
+    Escrever '  [ok]    politica de instalacao aplicada' 'Green'
+  } else {
+    Escrever '  [FALTA] politica de instalacao NAO aplicada' 'Red'
+    Escrever '          rode este script como administrador, sem -Conferir' 'DarkGray'
+    $problemas++
+  }
+
+  # 2) a extensao esta instalada em algum perfil do Chrome?
+  $achou = $false
+  $perfis = Get-ChildItem "$env:LOCALAPPDATA\Google\Chrome\User Data" -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' }
+  foreach ($perfil in $perfis) {
+    foreach ($nomeArq in @('Secure Preferences', 'Preferences')) {
+      $arq = Join-Path $perfil.FullName $nomeArq
+      if (-not (Test-Path $arq)) { continue }
+      try {
+        $prefs = Get-Content $arq -Raw -ErrorAction Stop | ConvertFrom-Json
+        $ext = $prefs.extensions.settings.$ID_EXTENSAO
+        if ($ext) {
+          $achou = $true
+          $versao = $ext.manifest.version
+          Escrever "  [ok]    instalada no perfil '$($perfil.Name)' — versao $versao" 'Green'
+
+          # 3) o toggle de file:// — o passo que nenhum script consegue LIGAR, mas da
+          #    para ler. O nome da chave ja mudou entre versoes do Chrome, entao tentamos
+          #    as tres conhecidas. NAO achar nenhuma nao e o mesmo que estar desligado:
+          #    nesse caso dizemos que nao deu para confirmar, em vez de dar alarme falso.
+          #    Ferramenta de diagnostico que grita errado deixa de ser consultada.
+          $fileAccess = $null
+          foreach ($chave in @('newAllowFileAccess', 'allow_file_access', 'allowFileAccess')) {
+            if ($ext.PSObject.Properties.Name -contains $chave) { $fileAccess = $ext.$chave; break }
+          }
+
+          if ($fileAccess -eq $true) {
+            Escrever '  [ok]    "Permitir acesso a URLs de arquivo" LIGADO' 'Green'
+          } elseif ($fileAccess -eq $false) {
+            Escrever '  [FALTA] "Permitir acesso a URLs de arquivo" DESLIGADO' 'Red'
+            Escrever '          chrome://extensions > Detalhes > ligue a chave' 'DarkGray'
+            Escrever '          sem isso, etiqueta salva no disco sai SEM ajuste' 'DarkGray'
+            $problemas++
+          } else {
+            Escrever '  [ver]   nao consegui ler o "Permitir acesso a URLs de arquivo"' 'Yellow'
+            Escrever '          confira na mao: chrome://extensions > Detalhes' 'DarkGray'
+          }
+        }
+      } catch { }
+    }
+  }
+  if (-not $achou) {
+    Escrever '  [FALTA] a extensao nao esta instalada em nenhum perfil do Chrome' 'Red'
+    $problemas++
+  }
+
+  Write-Host ''
+  if ($problemas -eq 0) {
+    Escrever '  Maquina OK. Ela vai receber as atualizacoes sozinha.' 'Green'
+  } else {
+    Escrever "  $problemas ponto(s) pendente(s) — veja acima." 'Yellow'
+  }
+  Escrever '  (o Chrome precisa estar FECHADO para a leitura do perfil ser confiavel)' 'DarkGray'
+  Write-Host ''
+  exit $problemas
+}
 
 # ── 0. Administrador? ────────────────────────────────────────────────────────
 $identidade = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -69,11 +171,6 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 
 # ── 1. Politica local ────────────────────────────────────────────────────────
 Titulo 'Liberando a instalacao no registro do Windows'
-
-# ExtensionInstallAllowlist: SO esta extensao fica liberada. Nao abrimos a maquina para
-# qualquer extensao de fora da loja — o ID e a lista inteira.
-$chaveAllow  = 'HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallAllowlist'
-$chaveFontes = 'HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallSources'
 
 New-Item -Path $chaveAllow  -Force | Out-Null
 New-Item -Path $chaveFontes -Force | Out-Null
