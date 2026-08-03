@@ -196,3 +196,11 @@ if ($baixados.ContainsKey('zip')) {
 
 Escrever "   Ajuda e instrucoes: $PAGINA" 'DarkGray'
 Write-Host ''
+
+# Abre a pasta para o operador arrastar o .crx de onde deve. Arrastar da barra de
+# downloads do Chrome e o erro mais comum aqui, e da CRX_FILE_NOT_READABLE.
+try {
+  Start-Process explorer.exe $Destino
+  Escrever '   (abri a pasta para voce — o arquivo a arrastar esta ali)' 'DarkGray'
+  Write-Host ''
+} catch { }

@@ -292,3 +292,42 @@ test('os icones usam as cores oficiais da marca', () => {
   assert.match(gerador, /VERDE_PROFUNDO = \[0x16, 0x30, 0x2A\]/);
   assert.match(gerador, /VERDE_NEON = \[0xC5, 0xFF, 0x56\]/);
 });
+
+test('o comando da pagina aponta para um script que existe mesmo no repositorio', () => {
+  // A pagina manda o operador colar uma URL crua do GitHub no PowerShell. Se alguem
+  // renomear ou mover o instalar.ps1, a URL passa a dar 404 e a instalacao quebra nas 60
+  // maquinas — sem nenhum teste falhando e sem ninguem ligar uma coisa a outra.
+  const pagina = fs.readFileSync(path.join(RAIZ, 'site', 'index.html'), 'utf8');
+  const repo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'package.json'), 'utf8'))
+    .repository.url.match(/github\.com\/([^/]+\/[^/.]+)/)[1];
+
+  const url = pagina.match(/https:\/\/raw\.githubusercontent\.com\/\S+?\.ps1/);
+  assert.ok(url, 'a pagina nao tem mais o comando de preparo da maquina');
+
+  const esperado = 'https://raw.githubusercontent.com/' + repo + '/main/scripts/instalar.ps1';
+  assert.equal(url[0], esperado, 'a URL do comando nao bate com este repositorio');
+  assert.ok(fs.existsSync(path.join(RAIZ, 'scripts', 'instalar.ps1')),
+    'a pagina aponta para scripts/instalar.ps1, que nao existe');
+
+  // A primeira linha precisa vir junto: sem o Set-ExecutionPolicy o Windows recusa o
+  // script, e sem o TLS 1.2 o PowerShell 5.1 nao fala com o GitHub.
+  const bloco = pagina.match(/<pre id="cmd-preparo">([\s\S]*?)<\/pre>/)[1];
+  assert.match(bloco, /Set-ExecutionPolicy -Scope Process Bypass -Force/);
+  assert.match(bloco, /SecurityProtocol = \[Net\.SecurityProtocolType\]::Tls12/);
+  assert.match(bloco, /-OutFile/, 'baixar para arquivo e mais depuravel que canalizar para iex');
+});
+
+test('a pagina nao oferece o ZIP como se fosse equivalente ao CRX', () => {
+  // Os dois lado a lado, sem explicacao, foi o que confundiu na v16.34: o ZIP NAO se
+  // atualiza sozinho, e instalar por ele mantem exatamente o problema que este projeto
+  // existe para resolver. Ele continua alcancavel, mas dobrado e com a desvantagem escrita.
+  const pagina = fs.readFileSync(path.join(RAIZ, 'site', 'index.html'), 'utf8');
+  const principais = [...pagina.matchAll(/class="btn btn-principal"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(principais.length, 1, 'a pagina precisa ter exatamente um caminho em destaque');
+  assert.doesNotMatch(principais[0], /URL_ZIP/, 'o ZIP virou o caminho principal da pagina');
+
+  assert.match(pagina, /<details[\s\S]*URL_ZIP[\s\S]*<\/details>/,
+    'o ZIP precisa continuar dobrado atras do <details>, e nao em destaque');
+  assert.match(pagina, /não se atualiza sozinho/,
+    'a pagina parou de avisar que o ZIP nao se atualiza sozinho');
+});

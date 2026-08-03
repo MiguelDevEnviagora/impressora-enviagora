@@ -70,6 +70,25 @@
   footer{text-align:center;color:var(--fraco);font-size:13px;margin-top:32px;line-height:1.8}
   footer a{color:var(--fraco)}
   .id{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}
+  kbd{
+    background:var(--fundo);border:1px solid var(--linha);border-bottom-width:2px;
+    border-radius:5px;padding:1px 6px;font:600 13px ui-monospace,Menlo,Consolas,monospace;
+  }
+  /* Bloco de comando. O botão de copiar não é enfeite: são 60 máquinas, e digitar
+     uma URL dessas à mão em cada uma é erro garantido. */
+  .bloco-cmd{position:relative;margin:16px 0 12px}
+  .bloco-cmd pre{
+    margin:0;background:#0f172a;color:#e2e8f0;border-radius:10px;
+    padding:44px 16px 16px;overflow-x:auto;
+    font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  .btn-copiar{
+    position:absolute;top:8px;right:8px;z-index:1;
+    background:var(--verde);color:#fff;border:0;border-radius:7px;
+    padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .btn-copiar:hover{background:var(--verde-escuro)}
+  .btn-copiar.feito{background:#334155}
 </style>
 </head>
 <body>
@@ -82,34 +101,59 @@
   </header>
 
   <div class="cartao">
-    <a class="btn btn-principal" href="{{URL_CRX}}">Instalar a extensão</a>
-    <p class="legenda">Depois de instalada, ela <strong>se atualiza sozinha</strong>. Você não precisa voltar aqui.</p>
+    <a class="btn btn-principal" href="#passo1">Começar a instalação</a>
+    <p class="legenda">São 3 passos, uns 5 minutos, uma vez só por computador.<br>Depois de instalada, ela <strong>se atualiza sozinha</strong> — você não precisa voltar aqui.</p>
+  </div>
+
+  <div class="cartao" id="passo1">
+    <h2>Passo 1 — Preparar a máquina</h2>
+    <p class="nota">Uma vez só por computador. Precisa de <strong>administrador</strong>. Se você não tem senha de administrador nessa máquina, pare aqui e chame a TI.</p>
+
+    <ol>
+      <li>Clique no <strong>botão Iniciar</strong> e digite <code>powershell</code>.</li>
+      <li>Em <strong>Windows PowerShell</strong>, clique com o <strong>botão direito</strong> e escolha <strong>Executar como administrador</strong>. Confirme o aviso do Windows.</li>
+      <li>Uma janela azul vai abrir. <strong>Copie o bloco abaixo inteiro</strong> e cole nela (botão direito dentro da janela já cola). Depois aperte <kbd>Enter</kbd>.</li>
+    </ol>
+
+    <div class="bloco-cmd">
+      <button class="btn-copiar" data-alvo="cmd-preparo">Copiar</button>
+      <pre id="cmd-preparo">Set-ExecutionPolicy -Scope Process Bypass -Force
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-RestMethod https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+&amp; "$env:TEMP\instalar-enviagora.ps1"</pre>
+    </div>
+
+    <p class="nota">O script libera a instalação no Windows, baixa a última versão e <strong>abre a pasta com o arquivo</strong> no fim. Ele mostra na tela o que fazer em seguida — é o mesmo que está aqui embaixo.</p>
+    <p class="nota">Se aparecer <em>“não pode ser carregado porque a execução de scripts foi desabilitada”</em>, é porque a primeira linha não foi colada junto. Cole o bloco <strong>inteiro</strong>.</p>
   </div>
 
   <div class="cartao">
-    <h2>Como instalar (5 minutos)</h2>
+    <h2>Passo 2 — Fechar e reabrir o Chrome</h2>
+    <p class="nota">Feche o Chrome <strong>por completo</strong> e abra de novo.</p>
+    <div class="destaque">
+      <strong>Não pule este passo.</strong>
+      <p>A liberação que o script fez no Windows só passa a valer quando o Chrome reinicia. Pulando, a instalação do passo 3 é recusada e parece que o script não funcionou.</p>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <h2>Passo 3 — Instalar a extensão</h2>
     <ol>
-      <li>Clique no botão verde. O arquivo <code>.crx</code> vai para a pasta de Downloads.</li>
       <li>No Chrome, abra <code>chrome://extensions</code>.</li>
-      <li>Se já existir uma versão antiga da Impressora Enviagora, clique em <strong>Remover</strong>.</li>
+      <li>Se já existir uma Impressora Enviagora antiga, clique em <strong>Remover</strong>.</li>
       <li>Ligue o <strong>Modo do desenvolvedor</strong>, no canto superior direito.</li>
-      <li><strong>Arraste o arquivo <code>.crx</code></strong> da pasta de Downloads para dentro dessa tela e confirme em <strong>Adicionar extensão</strong>.</li>
-      <li>Na extensão que apareceu, clique em <strong>Detalhes</strong> e ligue <strong>Permitir acesso a URLs de arquivo</strong>.</li>
-      <li>Recarregue a tela do sistema com <code>F5</code> e imprima uma etiqueta de teste.</li>
+      <li>Vá na pasta que o script abriu (<code>C:\Impressora-Enviagora</code>) e <strong>arraste o arquivo que termina em <code>.crx</code></strong> para dentro da tela do Chrome. Confirme em <strong>Adicionar extensão</strong>.</li>
+      <li>Clique em <strong>Detalhes</strong> na extensão e ligue <strong>Permitir acesso a URLs de arquivo</strong>.</li>
+      <li>Volte para a tela do sistema, aperte <kbd>F5</kbd> e imprima uma etiqueta de teste.</li>
     </ol>
 
     <div class="destaque">
-      <strong>No passo 1, o Chrome vai desconfiar do arquivo.</strong>
-      <p>Ele mostra algo como <em>“este tipo de arquivo pode danificar seu computador”</em> e deixa o download pela metade. Clique em <strong>Manter</strong> (ou <strong>Manter mesmo assim</strong>). Se você não clicar, o Chrome apaga o arquivo — e a instalação falha depois com <code>CRX_FILE_NOT_READABLE</code>, que quer dizer só isso: <strong>o arquivo não está mais lá</strong>.</p>
+      <strong>Arraste da pasta, nunca da barra de downloads do Chrome.</strong>
+      <p>Arrastar da barrinha falha com <code>CRX_FILE_NOT_READABLE</code> — que quer dizer apenas “não achei o arquivo”, e não que tem algo errado com ele. É por isso que o script baixa para uma pasta e abre ela para você.</p>
     </div>
 
     <div class="destaque">
-      <strong>No passo 5, arraste da pasta, não da barra de downloads.</strong>
-      <p>Abra a pasta <strong>Downloads</strong> no Explorador de Arquivos e arraste de lá. Arrastar direto da barrinha do Chrome falha com o mesmo <code>CRX_FILE_NOT_READABLE</code>.</p>
-    </div>
-
-    <div class="destaque">
-      <strong>O passo 6 é o que mais deixa gente na mão.</strong>
+      <strong>O passo 5 é o que mais deixa gente na mão.</strong>
       <p>Sem “Permitir acesso a URLs de arquivo”, a etiqueta salva no computador não é ajustada — sai do jeito que veio. Esse botão não tem como ser ligado por script: <strong>alguém precisa clicar nele em cada máquina</strong>. Se a impressão sair errada, é o primeiro lugar a conferir.</p>
     </div>
   </div>
@@ -145,5 +189,32 @@
   </footer>
 
 </div>
+
+<script>
+  // Copiar o bloco de comandos. Se o navegador não deixar (clipboard exige contexto
+  // seguro), cai na seleção do texto — o operador dá Ctrl+C e segue.
+  for (const botao of document.querySelectorAll('.btn-copiar')) {
+    botao.addEventListener('click', async () => {
+      const bloco = document.getElementById(botao.dataset.alvo);
+      const texto = bloco.textContent;
+      const avisar = (t) => {
+        botao.textContent = t;
+        botao.classList.add('feito');
+        setTimeout(() => { botao.textContent = 'Copiar'; botao.classList.remove('feito'); }, 2000);
+      };
+      try {
+        await navigator.clipboard.writeText(texto);
+        avisar('Copiado!');
+      } catch (e) {
+        const sel = window.getSelection();
+        const faixa = document.createRange();
+        faixa.selectNodeContents(bloco);
+        sel.removeAllRanges();
+        sel.addRange(faixa);
+        avisar('Selecionado — Ctrl+C');
+      }
+    });
+  }
+</script>
 </body>
 </html>
