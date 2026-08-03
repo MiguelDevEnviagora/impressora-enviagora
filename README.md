@@ -24,7 +24,7 @@ Roda em ~60 computadores da operação de fulfillment da Enviagora.
 ## Comandos
 
 ```bash
-npm test              # 48 testes, incluindo as 12 etiquetas reais. Sem navegador.
+npm test              # 63 testes, incluindo as 12 etiquetas reais. Sem navegador.
 npm run validate      # confere manifest, defaults.json e chave antes de publicar
 npm run build         # gera ZIP, ZIP-webstore e CRX assinado em dist/
 npm run bump          # sobe a versão em package.json e manifest juntos
