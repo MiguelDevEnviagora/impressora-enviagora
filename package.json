@@ -1,0 +1,23 @@
+{
+  "name": "impressora-enviagora",
+  "version": "16.34.0",
+  "description": "Extensao Chrome que ajusta e imprime etiquetas de envio (Amazon, Shopee, Mercado Livre, Correios) no formato 100x150 mm da operacao de fulfillment da Enviagora.",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "homepage": "https://enviagora.github.io/impressora-enviagora/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Enviagora/impressora-enviagora.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "validate": "node scripts/validate.mjs",
+    "build": "node scripts/validate.mjs && node scripts/build.mjs",
+    "bump": "node scripts/bump.mjs",
+    "chave": "node scripts/gerar-chave.mjs"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "manifest_version": 3,
+  "name": "IMPRESSORA ENVIAGORA",
+  "version": "16.34.0",
+  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.34: configuracao remota com kill switch, atualizacao automatica e padroes em fonte unica.",
+  "permissions": [
+    "tabs",
+    "scripting",
+    "webNavigation",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "file://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>",
+        "file://*/*"
+      ],
+      "js": [
+        "hook.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "<all_urls>",
+        "file://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "labeler.js",
+        "crop-etiqueta.js",
+        "config-padrao.js",
+        "pdf-lib.min.js",
+        "lib/pdf.min.js",
+        "lib/pdf.worker.min.js",
+        "motor.js"
+      ],
+      "matches": [
+        "<all_urls>",
+        "file://*/*"
+      ]
+    }
+  ],
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_title": "IMPRESSORA ENVIAGORA",
+    "default_popup": "popup.html"
+  }
+}

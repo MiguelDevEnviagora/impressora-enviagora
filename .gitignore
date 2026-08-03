@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  A CHAVE PRIVADA DO CRX NUNCA ENTRA AQUI.
+#
+#  Ela e o que trava o ID da extensao. O ID travado e o que faz o "Permitir acesso a
+#  URLs de arquivo" sobreviver as atualizacoes nas ~60 maquinas.
+#
+#  PERDER a chave = perder a capacidade de atualizar as 60 maquinas. Todo mundo teria
+#  que reinstalar na mao, e o toggle de file:// voltaria a ser marcado um por um.
+#  VAZAR a chave = qualquer um assina um CRX que o Chrome aceita como atualizacao
+#  legitima desta extensao. E este repositorio e PUBLICO por necessidade tecnica
+#  (o Chrome nao autentica ao consultar a update_url).
+#
+#  Onde ela mora: cofre de senhas da empresa + secret CRX_PRIVATE_KEY no GitHub Actions.
+#  Ver docs/ARQUITETURA.md.
+# ─────────────────────────────────────────────────────────────────────────────
+*.pem
+*.key
+chave-privada*
+
+# Saida do build (ZIP, CRX, updates.xml gerado). Tudo isso vai para o Release, nao para
+# o repositorio.
+dist/
+
+# Node
+node_modules/
+npm-debug.log*
+.npm
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

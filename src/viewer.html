@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Etiqueta</title>
+<style>
+  html,body{margin:0;height:100%;background:#525659;font-family:Arial,Helvetica,sans-serif}
+  iframe{border:0;width:100%;height:100%;display:block}
+  #aviso{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#111827;color:#fff;
+    padding:8px 14px;border-radius:999px;font-size:13px;opacity:.95;z-index:9}
+  #drop{display:none;position:fixed;inset:0;align-items:center;justify-content:center;color:#fff;text-align:center}
+  #drop.on{display:flex}
+  #drop div{border:2px dashed #9ca3af;border-radius:16px;padding:36px 44px}
+  button{margin-top:12px;padding:8px 16px;border:0;border-radius:8px;background:#16a34a;color:#fff;
+    font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+  <div id="aviso">Ajustando a etiqueta…</div>
+  <iframe id="view"></iframe>
+  <div id="drop"><div>
+    Não consegui abrir a etiqueta sozinho.<br>Arraste o PDF aqui.
+    <br><button id="pick">Escolher arquivo</button>
+    <input id="file" type="file" accept="application/pdf" hidden>
+  </div></div>
+  <script src="lib/pdf.min.js"></script>
+  <script src="pdf-lib.min.js"></script>
+  <script src="crop-etiqueta.js"></script>
+  <script src="config-padrao.js"></script>
+  <script src="labeler.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html>

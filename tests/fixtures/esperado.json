@@ -1,0 +1,150 @@
+{
+  "_comentario": "Gerado pela v16.33. left/bottom/width/height em pontos PDF. tolerancia: 1pt. esperado=null significa que a deteccao geometrica NAO pode disparar — a etiqueta segue para o caminho antigo (Correios).",
+  "casos": [
+    {
+      "arquivo": "amazon/6a70e1132967a.pdf",
+      "transportadora": "Amazon",
+      "paginas": 1,
+      "pagina": {
+        "width": 595.28,
+        "height": 841.89
+      },
+      "esperado": {
+        "left": 0,
+        "bottom": 420.89,
+        "width": 296.64,
+        "height": 421
+      }
+    },
+    {
+      "arquivo": "amazon/6a70e1214eaae.pdf",
+      "transportadora": "Amazon",
+      "paginas": 3,
+      "pagina": {
+        "width": 595,
+        "height": 842
+      },
+      "esperado": {
+        "left": 0,
+        "bottom": 0,
+        "width": 288,
+        "height": 432
+      }
+    },
+    {
+      "arquivo": "amazon/6a70e12cb13ef.pdf",
+      "transportadora": "Amazon",
+      "paginas": 1,
+      "pagina": {
+        "width": 595.28,
+        "height": 841.89
+      },
+      "esperado": {
+        "left": 0,
+        "bottom": -0.11,
+        "width": 288,
+        "height": 432
+      }
+    },
+    {
+      "arquivo": "amazon/6a70e13c645b6.pdf",
+      "transportadora": "Amazon",
+      "paginas": 1,
+      "pagina": {
+        "width": 595.28,
+        "height": 841.89
+      },
+      "esperado": {
+        "left": 0,
+        "bottom": -0.11,
+        "width": 288,
+        "height": 432
+      }
+    },
+    {
+      "arquivo": "amazon/6a70e14af16b9.pdf",
+      "transportadora": "Amazon",
+      "paginas": 1,
+      "pagina": {
+        "width": 595.28,
+        "height": 841.89
+      },
+      "esperado": {
+        "left": 0,
+        "bottom": -0.11,
+        "width": 288,
+        "height": 432
+      }
+    },
+    {
+      "arquivo": "correios/6a70e659e1266.pdf",
+      "transportadora": "Correios",
+      "paginas": 1,
+      "pagina": {
+        "width": 609.45,
+        "height": 790.86
+      },
+      "esperado": null
+    },
+    {
+      "arquivo": "correios/6a70e6737269e.pdf",
+      "transportadora": "Correios",
+      "paginas": 1,
+      "pagina": {
+        "width": 284,
+        "height": 425
+      },
+      "esperado": null
+    },
+    {
+      "arquivo": "correios/6a70e6813c4f0.pdf",
+      "transportadora": "Correios",
+      "paginas": 1,
+      "pagina": {
+        "width": 595,
+        "height": 842
+      },
+      "esperado": null
+    },
+    {
+      "arquivo": "correios/6a70e68df0d22.pdf",
+      "transportadora": "Correios",
+      "paginas": 1,
+      "pagina": {
+        "width": 284,
+        "height": 425
+      },
+      "esperado": null
+    },
+    {
+      "arquivo": "correios/6a70e695c0700.pdf",
+      "transportadora": "Correios",
+      "paginas": 1,
+      "pagina": {
+        "width": 595,
+        "height": 842
+      },
+      "esperado": null
+    },
+    {
+      "arquivo": "correios/6a70e69f023e4.pdf",
+      "transportadora": "Correios",
+      "paginas": 1,
+      "pagina": {
+        "width": 595,
+        "height": 842
+      },
+      "esperado": null
+    },
+    {
+      "arquivo": "correios/6a70e6adf3afc.pdf",
+      "transportadora": "Correios",
+      "paginas": 1,
+      "pagina": {
+        "width": 283.46,
+        "height": 425.2
+      },
+      "esperado": null
+    }
+  ]
+}

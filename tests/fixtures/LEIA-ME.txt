@@ -1,0 +1,45 @@
+FIXTURES DA IMPRESSORA ENVIAGORA
+================================
+
+Estas 12 etiquetas sao o ativo mais valioso do projeto. Elas sao o unico jeito de saber,
+ANTES de publicar, se uma mudanca quebrou alguma transportadora. Cada uma esta aqui
+porque ja quebrou de verdade em producao ou porque cobre uma variante distinta.
+
+Onde colocar: tests/fixtures/ na raiz do repositorio. Versionadas junto do codigo.
+
+
+amazon/  (5) — o detector geometrico TEM que achar o bloco 4x6
+------------------------------------------------------------------
+6a70e1214eaae.pdf   3 paginas, iText. Unica que ja funcionava antes da v16.32.
+6a70e12cb13ef.pdf   1 pagina, FPDF. Quebrava: era rotulada como Shopee.
+6a70e13c645b6.pdf   1 pagina, FPDF. Quebrava: era rotulada como Shopee.
+6a70e14af16b9.pdf   1 pagina, FPDF. Quebrava: era rotulada como Shopee.
+6a70e1132967a.pdf   1 pagina, FPDF. VARIANTE DE LAYOUT: etiqueta no quadrante de CIMA,
+                    com marcas de corte e escala 1.03 x 0.97454. Nenhum retangulo fixo
+                    cobre esta e as outras ao mesmo tempo — e a razao de o detector ser
+                    geometrico.
+
+correios/  (7) — o detector geometrico NAO pode disparar (esperado: null)
+------------------------------------------------------------------
+6a70e6adf3afc.pdf   FPDF, pagina 283x425 pt = 100x150 mm.
+                    ESTA E A ARMADILHA: 283x425 cai dentro da tolerancia de 6% sobre
+                    288x432 (4x6 pol). Sem a guarda de area, o detector devolvia
+                    "Amazon" e o fluxo pulava o recorte dos Correios.
+6a70e6737269e.pdf   Qt 4.8.7, pagina 284x425 pt.
+6a70e68df0d22.pdf   Qt 4.8.7, pagina 284x425 pt.
+6a70e695c0700.pdf   Qt 4.8.7, pagina A4.
+6a70e6813c4f0.pdf   Qt 4.8.7, pagina A4.
+6a70e69f023e4.pdf   Qt 4.8.7, pagina A4.
+6a70e659e1266.pdf   Gnostice eDocEngine, pagina 609x791 pt (tamanho fora do padrao).
+
+
+esperado.json
+------------------------------------------------------------------
+Retangulo de corte esperado de cada arquivo, em pontos PDF, gerado pela v16.33 ja
+validada. Tolerancia do teste: 1 pt.
+
+esperado = null significa "a deteccao geometrica NAO pode disparar". Se disparar, o
+recorte dos Correios e pulado e a etiqueta sai errada — foi exatamente o bug da v16.32.
+
+Um teste que so verifique a Amazon esta pela metade. Os dois lados importam:
+a Amazon precisa ser achada, e os Correios precisam ser deixados em paz.

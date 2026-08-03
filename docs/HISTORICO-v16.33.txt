@@ -1,0 +1,167 @@
+IMPRESSORA ENVIAGORA v16.33
+
+===========================================================================
+1. O RECORTE DA AMAZON — a correcao principal
+===========================================================================
+
+O PROBLEMA
+Ate a v16.31 a transportadora era adivinhada pela QUANTIDADE DE PAGINAS do PDF:
+
+    A4 com mais de uma pagina  ->  Amazon
+    A4 com uma pagina          ->  Shopee
+
+So que etiqueta da Amazon SEM a lista de postagem anexa vem com UMA pagina. Ela caia
+no ramo do Shopee e era recortada em bottom:398 — a metade de cima da folha, que na
+Amazon esta em branco. Era exatamente isso que fazia "umas sairem certas e outras nao".
+
+E tem uma segunda variante: parte das etiquetas vem no quadrante de CIMA da folha, com
+marcas de corte tracejadas e escala levemente diferente (cm de 1.03 0 0 0.97454 0 421).
+Nenhum retangulo fixo cobre as duas.
+
+A CORRECAO
+Agora a Amazon e achada pela GEOMETRIA do arquivo, nao pela contagem de paginas.
+O que nao muda entre as variantes e estrutural: a etiqueta e sempre desenhada dentro de
+um Form XObject de 4x6 polegadas (288 x 432 pt). O que muda e so a matriz que cola esse
+bloco na folha. O detector percorre o content stream rastreando q / Q / cm, desce nos
+XObjects aninhados, acha o bloco 4x6 e transforma os 4 cantos pela matriz acumulada.
+Sai o retangulo exato, seja qual for o layout.
+
+Esta em crop-etiqueta.js, roda em pdf-lib puro (sem canvas), leva menos de 3 ms por
+etiqueta e vale nos dois niveis: service worker e motor da pagina.
+
+VALIDADO em 5 etiquetas reais:
+
+    arquivo       paginas  antes            agora
+    ...4af16b9    1        Shopee (errado)  left 0  bottom -0.11   288 x 432
+    ...3c645b6    1        Shopee (errado)  left 0  bottom -0.11   288 x 432
+    ...2cb13ef    1        Shopee (errado)  left 0  bottom -0.11   288 x 432
+    ...132967a    1        Shopee (errado)  left 0  bottom 420.89  296.6 x 421
+    ...1214eaae   3        Amazon (ok)      left 0  bottom 0       288 x 432
+
+A MUDANCA E ADITIVA. Se a deteccao geometrica nao achar nada, cai exatamente nas regras
+antigas — Shopee e Mercado Livre seguem intactos. Nada que funcionava parou de funcionar.
+
+
+===========================================================================
+2. TRAVA POR SENHA
+===========================================================================
+
+SENHA DE FABRICA: enviagora     <-- TROQUE no popup, item 7, antes de distribuir.
+
+- Desligar a extensao pelo popup passa a pedir senha.
+- A senha nunca fica em texto: so o SHA-256 dela com um sal aleatorio.
+- Se alguem tentar desligar por fora (console, storage), o background DESFAZ sozinho.
+  So vale o desligamento feito com senha, e dentro de 60 segundos.
+- Quando a extensao esta desligada, a pagina do WMS ganha uma tarja vermelha no topo
+  avisando. Assim ninguem passa a tarde imprimindo errado sem perceber.
+
+O QUE A TRAVA NAO FAZ
+Ela protege o botao de dentro da extensao. Ela NAO impede desativar ou remover a
+extensao em chrome://extensions — nenhuma extensao consegue impedir isso. Bloquear esse
+caminho so com politica corporativa (Chrome Enterprise Core / GPO), que e assunto do
+projeto de distribuicao automatica.
+
+
+===========================================================================
+3. ESCALA NA IMPRESSAO
+===========================================================================
+
+O LIMITE, DITO DE FRENTE
+Nenhuma extensao consegue mexer no seletor de escala do dialogo de impressao do Chrome
+("Ajustar a pagina" / "Padrao" / "Personalizado"). Nao existe API para isso — nem no
+Manifest V3, nem em versao nenhuma.
+
+O QUE DA PARA FAZER, E O QUE A v16.32 FAZ
+Entregar um PDF que sai IGUAL em qualquer opcao do seletor:
+
+  a) MediaBox, CropBox, TrimBox e BleedBox todas iguais ao tamanho da etiqueta.
+     Com a pagina no tamanho exato, "Ajustar a pagina" e 100% dao o mesmo resultado.
+  b) /ViewerPreferences /PrintScaling gravado no PDF — o visualizador le como
+     "imprimir em tamanho real".
+  c) /PickTrayByPDFSize — pede a bandeja com o papel do tamanho do PDF.
+  d) Margem de seguranca — item 6 do popup, PADRAO 0. Recua a arte da faixa nao
+     imprimivel da impressora. So mexa se estiver cortando na borda.
+     Ela NUNCA e aplicada aos Correios: a etiqueta dos Correios precisa sair coladinha
+     na borda, senao o leitor nao bipa.
+
+SE AINDA ASSIM PRECISAR
+Marque "Ajustar a pagina" uma vez na maquina. O Chrome guarda a escolha por impressora
+e ela passa a valer nas proximas impressoes.
+
+
+===========================================================================
+4. INSTALACAO
+===========================================================================
+
+1. chrome://extensions -> remover a versao anterior
+2. Ligar "Modo do desenvolvedor" (canto superior direito)
+3. "Carregar sem compactacao" -> selecionar esta pasta
+4. "Detalhes" -> ligar "Permitir acesso a URLs de arquivo"
+5. RECARREGAR a tela do Stokki (F5)
+6. Abrir o popup da extensao e TROCAR A SENHA (item 7)
+
+
+===========================================================================
+5. O QUE FOI MANTIDO DA v16.31
+===========================================================================
+
+- Devolucao de foco e afterprint para a pagina (fim do travamento apos imprimir).
+- Motor enxuto: so o recorte dos Correios. 7 a 206 ms por etiqueta.
+- Correios: cabecalho + DDI + operador + arte ampliada, margem lateral ~1mm.
+- Shopee e Mercado Livre: caminho de sempre, sem alteracao na deteccao.
+- Reconstrucao do codigo de barras da J&T: continua fora.
+
+OS CORREIOS SAEM NO TAMANHO CHEIO, como sempre: margem lateral de 1 mm e
+"preencher a largura" ligado. Medido nas 7 etiquetas de teste: 98 mm de arte numa
+etiqueta de 100 mm em 6 delas; na setima a altura e que limita, nao a largura.
+
+
+===========================================================================
+6. ARQUIVOS QUE MUDARAM
+===========================================================================
+
+crop-etiqueta.js  NOVO — detector geometrico da etiqueta 4x6
+background.js     detectLabel com a geometria na frente; trava por senha;
+                  preferencias de impressao; margem minima de seguranca
+labeler.js        mesma deteccao no motor; preferencias de impressao
+content.js        tarja vermelha quando a extensao esta desligada
+popup.html/.js    itens 6 (impressao) e 7 (trava), pedido de senha, aviso
+manifest.json     versao 16.32, crop-etiqueta.js exposto ao motor
+worker.html       carrega crop-etiqueta.js
+viewer.html       carrega crop-etiqueta.js
+
+
+===========================================================================
+7. CORRECAO DA v16.33 — o que a v16.32 quebrou nos Correios
+===========================================================================
+
+A v16.32 quebrou os Correios de duas formas. As duas estao corrigidas.
+
+PROBLEMA 1 — O DETECTOR CONFUNDIA CORREIOS COM AMAZON
+A tolerancia de 6% em cima de 288x432 pt (4x6 pol) tambem alcanca 283x425 pt, que e
+100x150 mm: o tamanho exato da etiqueta dos Correios. Numa etiqueta dos Correios que ja
+vem no tamanho final, o "bloco 4x6" achado era a PAGINA INTEIRA. O detector devolvia
+"Amazon", e o fluxo pulava o recorte dos Correios.
+
+Correcao — duas travas:
+  a) GUARDA DE AREA: se o bloco achado ocupa mais de 70% da pagina, o detector devolve
+     null. Ele so faz sentido quando ha uma etiqueta PEQUENA dentro de uma folha MAIOR;
+     se o bloco e a pagina toda, nao ha o que recortar.
+     Amazon ocupa ~25% da folha A4. Correios no tamanho final ocupa 100%.
+  b) O palpite geometrico agora vem marcado com geo:true, e o teste de texto dos
+     Correios ("Contrato:", "SEDEX", codigo AA999999999BR) pode DERRUBA-LO. O texto e um
+     sinal muito mais especifico do que "existe um bloco de 4x6 nesta folha".
+     Assim, mesmo um Correios em folha A4 com um bloco 4x6 dentro sai certo.
+
+PROBLEMA 2 — A MARGEM DE SEGURANCA ENCOLHIA A ETIQUETA
+O piso de 3 mm que entrou na v16.32 se aplicava tambem aos Correios, que usava 1 mm.
+Resultado: borda branca nas laterais e o leitor dos Correios sem conseguir bipar.
+
+Correcao: o piso agora e 0 por padrao (comportamento identico ao da v16.31) e NUNCA se
+aplica ao caminho "preencher a largura" dos Correios. Quem manda ali continua sendo
+correiosMarginMm (1 mm). Quem ja instalou a v16.32 tem o valor zerado automaticamente na
+atualizacao.
+
+VALIDADO em 7 etiquetas reais dos Correios (Qt 4.8.7, FPDF, Gnostice; paginas 284x425,
+A4 e 609x791): as 7 seguem para o caminho dos Correios, e 6 delas usam 98 mm dos 100 mm
+de largura. Na setima o limite e a altura da arte, nao a margem.
