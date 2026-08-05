@@ -49,6 +49,13 @@
     // devolve "Falha ao imprimir". Se alguma maquina continuar falhando, subir aqui
     // resolve em 1 hora, sem publicar versao nova.
     printSettleMs: 400,
+    // Disparar o afterprint sintetico depois de imprimir. Ligado, destrava a tela do WMS;
+    // e o suspeito de fazer o WMS imprimir a propria tela. Desligavel remotamente para
+    // conferir a causa em producao sem publicar versao. Ver hook.js.
+    afterprintSintetico: true,
+    // Ignorar um print() da PAGINA disparado logo depois do nosso afterprint. E o que
+    // impede a tela do WMS de sair impressa como um bloco preto.
+    bloquearPrintDaTela: true,
     outputWidthMm: 100,
     outputHeightMm: 150,
     marginMm: 2,
@@ -118,6 +125,8 @@
     printSafeMarginMm: { tipo: 'num', min: 0, max: 10, remoto: true },
     // Teto de 5 s: acima disso o operador percebe a demora e acha que travou.
     printSettleMs: { tipo: 'num', min: 0, max: 5000, remoto: true },
+    afterprintSintetico: { tipo: 'bool', remoto: true },
+    bloquearPrintDaTela: { tipo: 'bool', remoto: true },
 
     // Textos e carimbos
     addHeaderText: { tipo: 'bool', remoto: true },

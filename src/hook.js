@@ -91,11 +91,39 @@
    * content.js entrega o valor por postMessage: este arquivo roda no MUNDO MAIN e não
    * enxerga chrome.storage. */
   let assentamentoMs = 400;
+  let afterprintSintetico = true;
+  let bloquearPrintDaTela = true;
+
   window.addEventListener('message', (ev) => {
     const d = ev.data;
-    if (!d || d.__enviagora !== 'config' || ev.source !== window) return;
-    if (Number.isFinite(d.printSettleMs)) assentamentoMs = d.printSettleMs;
+    if (!d) return;
+
+    if (d.__enviagora === 'config' && ev.source === window) {
+      if (Number.isFinite(d.printSettleMs)) assentamentoMs = d.printSettleMs;
+      if (typeof d.afterprintSintetico === 'boolean') afterprintSintetico = d.afterprintSintetico;
+      if (typeof d.bloquearPrintDaTela === 'boolean') bloquearPrintDaTela = d.bloquearPrintDaTela;
+      return;
+    }
+    // Eco vindo de um frame filho: ele acabou de disparar o afterprint sintetico aqui.
+    if (d.__enviagora === 'eco-afterprint') ultimoAfterprintSintetico = Date.now();
   });
+
+  /* Marca de quando disparamos o afterprint sintetico.
+   *
+   * O PROBLEMA QUE ISSO RESOLVE
+   * Saía uma folha inteira PRETA junto com a etiqueta certa. Era a TELA do WMS sendo
+   * impressa: `window.print()` numa página que não é PDF manda a página inteira para a
+   * impressora, e uma interface escura vira um retângulo preto.
+   *
+   * O gatilho é nosso: para destravar a tela depois de imprimir, disparamos um `afterprint`
+   * sintético. Se o fluxo do WMS escuta esse evento e responde chamando print() de novo,
+   * ele imprime a si mesmo — e a extensão desligada não tem esse comportamento, que é
+   * exatamente o que a operação relatou.
+   *
+   * Aqui guardamos o instante do disparo. Um print() da PÁGINA logo depois dele é eco
+   * nosso, e não pedido de ninguém: ignoramos e avisamos no console. */
+  let ultimoAfterprintSintetico = 0;
+  const JANELA_ECO_MS = 3000;
 
   /* FILA — uma impressão por vez.
    *
@@ -175,11 +203,20 @@
         if (focoAnterior && typeof focoAnterior.focus === 'function') focoAnterior.focus();
         else if (document.body && document.body.focus) document.body.focus();
       } catch (e) {}
+      // Desligavel pelo config remoto: se este afterprint for mesmo o que faz o WMS
+      // imprimir a tela, da para conferir em producao numa hora, sem publicar versao.
+      // Desligando, o efeito colateral conhecido e a tela do WMS voltar a ficar "travada"
+      // ate o operador clicar em algum lugar — foi o bug que ele veio corrigir.
+      if (!afterprintSintetico) return;
+
+      ultimoAfterprintSintetico = Date.now();
       try { window.dispatchEvent(new Event('afterprint')); } catch (e) {}
       try {
         if (window.top && window.top !== window) {
           window.top.focus();
           window.top.dispatchEvent(new Event('afterprint'));
+          // O frame de cima tem a propria copia deste script e a propria marca de tempo.
+          window.top.postMessage({ __enviagora: 'eco-afterprint' }, '*');
         }
       } catch (e) {}
     };
@@ -216,10 +253,25 @@
   if (origPrint) {
     window.print = function () {
       const reg = pendentes.get(String(location.href));
-      if (!reg) return origPrint();
-      reg.promessa.then((nova) => {
-        if (nova) location.replace(nova); else origPrint();
-      });
+      if (reg) {
+        reg.promessa.then((nova) => {
+          if (nova) location.replace(nova); else origPrint();
+        });
+        return;
+      }
+
+      // Chegou aqui: este documento NAO e um PDF nosso. Imprimir significa mandar a
+      // PAGINA INTEIRA para a impressora — a tela do WMS, que sai como um bloco preto na
+      // etiqueta. Se veio logo depois do nosso afterprint sintetico, o pedido e eco nosso.
+      const desdeOEco = Date.now() - ultimoAfterprintSintetico;
+      if (bloquearPrintDaTela && desdeOEco < JANELA_ECO_MS) {
+        console.warn('[Enviagora] ignorei um print() da PAGINA disparado ' + desdeOEco +
+                     'ms depois do nosso afterprint. Isso imprimiria a TELA, nao a etiqueta. ' +
+                     'Se alguma impressao legitima estiver sumindo, desligue ' +
+                     'bloquearPrintDaTela no config remoto.');
+        return;
+      }
+      return origPrint();
     };
   }
 })();

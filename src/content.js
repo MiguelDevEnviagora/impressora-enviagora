@@ -143,12 +143,18 @@
   function avisarHook() {
     try {
       chrome.storage.local.get({ configRemoto: null }, (loc) => {
-        chrome.storage.sync.get({ printSettleMs: undefined }, (sync) => {
-          const remoto = loc && loc.configRemoto && loc.configRemoto.campos;
-          const valor = (sync && sync.printSettleMs !== undefined) ? sync.printSettleMs
-                      : (remoto && remoto.printSettleMs !== undefined) ? remoto.printSettleMs
-                      : 400;   // mesmo padrão embutido de config-padrao.js
-          window.postMessage({ __enviagora: 'config', printSettleMs: Number(valor) }, '*');
+        chrome.storage.sync.get(null, (sync) => {
+          const remoto = (loc && loc.configRemoto && loc.configRemoto.campos) || {};
+          const escolher = (campo, padrao) =>
+            (sync && sync[campo] !== undefined) ? sync[campo]
+            : (remoto[campo] !== undefined) ? remoto[campo]
+            : padrao;   // mesmos padrões embutidos de config-padrao.js
+          window.postMessage({
+            __enviagora: 'config',
+            printSettleMs: Number(escolher('printSettleMs', 400)),
+            afterprintSintetico: escolher('afterprintSintetico', true) !== false,
+            bloquearPrintDaTela: escolher('bloquearPrintDaTela', true) !== false
+          }, '*');
         });
       });
     } catch (e) {}
@@ -156,7 +162,9 @@
   avisarHook();
   try {
     chrome.storage.onChanged.addListener((m, area) => {
-      if ((area === 'local' && m.configRemoto) || (area === 'sync' && m.printSettleMs)) avisarHook();
+      const tocou = ['printSettleMs', 'afterprintSintetico', 'bloquearPrintDaTela'];
+      if ((area === 'local' && m.configRemoto) ||
+          (area === 'sync' && tocou.some((k) => m[k]))) avisarHook();
     });
   } catch (e) {}
 })();

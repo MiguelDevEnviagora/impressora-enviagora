@@ -65,7 +65,14 @@ const NOVOS_DEPOIS_DA_v16_33 = {
   // v16.35.1 — pausa entre o PDF carregar e o print() ser chamado. Sem ela o Chrome as
   // vezes abre o dialogo e devolve "Falha ao imprimir - ocorreu um erro durante a
   // impressao". Ver o comentario "ASSENTAMENTO" em hook.js.
-  printSettleMs: 400
+  printSettleMs: 400,
+
+  // v16.35.3 — a operacao viu sair uma folha inteira PRETA junto com a etiqueta: era a
+  // TELA do WMS sendo impressa, disparada pelo nosso proprio afterprint sintetico.
+  // Os dois sao interruptores de diagnostico: dao para isolar a causa em producao, em
+  // 1 hora, sem publicar versao. Ver o comentario longo em hook.js.
+  afterprintSintetico: true,
+  bloquearPrintDaTela: true
 };
 
 test('nao sobrou nenhum campo a mais nem a menos', () => {

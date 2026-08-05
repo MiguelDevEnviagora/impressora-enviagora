@@ -418,10 +418,13 @@ test('o hook recebe o printSettleMs do content.js', () => {
   // hook.js roda no MUNDO MAIN e nao enxerga chrome.storage. Sem esta ponte ele fica
   // preso no padrao embutido, e ajustar o valor remotamente nao teria efeito nenhum
   // no caminho do WMS — que e exatamente onde o bug aparece.
-  assert.match(lerSrc('content.js'), /__enviagora: 'config', printSettleMs/,
-    'content.js parou de entregar o printSettleMs ao hook');
-  assert.match(lerSrc('hook.js'), /d\.__enviagora !== 'config'/,
-    'hook.js parou de escutar o printSettleMs');
+  const content = lerSrc('content.js');
+  assert.match(content, /__enviagora: 'config'/, 'content.js parou de falar com o hook');
+  for (const campo of ['printSettleMs', 'afterprintSintetico', 'bloquearPrintDaTela']) {
+    assert.match(content, new RegExp(campo + ':'), 'content.js nao entrega ' + campo + ' ao hook');
+  }
+  assert.match(lerSrc('hook.js'), /d\.__enviagora === 'config'/,
+    'hook.js parou de escutar a configuracao vinda do content.js');
 });
 
 test('a extensao pede atualizacao de hora em hora, e nao so quando o Chrome resolve', () => {
@@ -453,4 +456,21 @@ test('a atualizacao nunca e aplicada no meio de uma etiqueta', () => {
   assert.match(bg, /trabalhosEmAndamento\+\+/, 'ninguem mais incrementa o contador');
   assert.match(bg, /trabalhosEmAndamento = Math\.max\(0, trabalhosEmAndamento - 1\)/,
     'o contador nao e mais decrementado — a extensao nunca mais se atualizaria');
+});
+
+test('a extensao nao deixa a TELA do WMS ir para a impressora', () => {
+  // O BUG: saia uma folha inteira PRETA junto com a etiqueta. Era a tela do WMS: um
+  // window.print() numa pagina que nao e PDF manda a PAGINA para a impressora, e uma
+  // interface escura vira um retangulo preto. O gatilho era nosso proprio afterprint
+  // sintetico voltando como um pedido de impressao.
+  const hook = lerSrc('hook.js');
+  assert.match(hook, /ultimoAfterprintSintetico = Date\.now\(\)/,
+    'o hook parou de marcar quando disparou o afterprint sintetico');
+  assert.match(hook, /bloquearPrintDaTela && desdeOEco < JANELA_ECO_MS/,
+    'o hook voltou a deixar passar o print() da pagina disparado pelo nosso afterprint');
+
+  // E o cinto de seguranca: mesmo que ALGO imprima o viewer, ele nao sai preto.
+  const viewer = lerSrc('viewer.html');
+  assert.match(viewer, /@media print\{[\s\S]*background:#fff !important/,
+    'viewer.html perdeu a regra de impressao — o fundo #525659 voltaria a sair como um bloco preto');
 });

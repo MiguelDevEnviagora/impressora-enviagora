@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "IMPRESSORA ENVIAGORA",
-  "version": "16.35.2",
-  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.35.2: procura atualizacao de hora em hora e aplica sem interromper etiqueta.",
+  "version": "16.35.3",
+  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.35.3: impede a tela do WMS de sair impressa junto com a etiqueta.",
   "permissions": [
     "tabs",
     "scripting",
