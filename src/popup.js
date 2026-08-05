@@ -97,10 +97,25 @@ function descreverCache(cache, delta) {
     : 'Esta máquina não tem nenhum ajuste manual — segue 100% o padrão da empresa.';
 }
 
+/* Marca, no proprio seletor, qual opcao e o padrao da empresa AGORA.
+   Antes o rotulo trazia "(recomendado)" escrito na mao — e ele ficou mentindo no dia em
+   que a matriz mudou o padrao pelo config remoto. Assim ele nunca desatualiza. */
+function marcarPadraoDaEmpresa() {
+  for (const campo of ['printScaling', 'timestampPosition', 'correiosScope']) {
+    const el = document.getElementById(campo);
+    if (!el || el.tagName !== 'SELECT') continue;
+    for (const op of el.options) {
+      op.textContent = op.textContent.replace(/ — padrão da empresa$/, '');
+      if (op.value === String(baseline[campo])) op.textContent += ' — padrão da empresa';
+    }
+  }
+}
+
 async function recarregar() {
   const { s, cache, delta } = await CFG.carregar();
   baseline = CFG.efetivo(cache && cache.campos, null);
   fillForm(s);
+  marcarPadraoDaEmpresa();
   descreverCache(cache, delta);
 }
 

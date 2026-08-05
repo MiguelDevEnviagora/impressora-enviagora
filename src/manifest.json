@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "IMPRESSORA ENVIAGORA",
-  "version": "16.36.2",
-  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.36.2: o popup passa a dizer como forcar a atualizacao quando o Chrome limita a busca.",
+  "version": "16.36.3",
+  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.36.3: o popup marca sozinho qual opcao e o padrao da empresa.",
   "permissions": [
     "tabs",
     "scripting",

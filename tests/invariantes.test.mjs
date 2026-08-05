@@ -537,3 +537,14 @@ test('quando o Chrome limita a busca, o popup diz o que FAZER', () => {
   assert.match(popup, /chrome\.tabs\.create\(\{ url: 'chrome:\/\/extensions' \}\)/,
     'sumiu o atalho para o caminho que realmente forca a atualizacao');
 });
+
+test('nenhum rotulo do popup traz "(recomendado)" escrito na mao', () => {
+  // O seletor de escala dizia "Tamanho real (recomendado)". No dia em que a matriz trocou
+  // o padrao pelo config remoto — sem publicar versao — o rotulo passou a mentir para o
+  // operador. Agora quem marca o padrao vigente e o codigo, lendo o config em vigor.
+  const html = lerSrc('popup.html');
+  assert.doesNotMatch(html, /\(recomendado\)/,
+    'voltou um "(recomendado)" fixo no HTML; ele desatualiza sozinho quando o config remoto muda');
+  assert.match(lerSrc('popup.js'), /padrão da empresa/,
+    'sumiu a marcacao dinamica do padrao vigente no seletor');
+});
