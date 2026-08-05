@@ -77,15 +77,67 @@ function agendarConfig() {
 }
 
 chrome.alarms.onAlarm.addListener((a) => {
-  if (a && a.name === ALARME_CONFIG) self.EnviagoraConfig.atualizarRemoto();
+  if (a && a.name !== ALARME_CONFIG) return;
+  self.EnviagoraConfig.atualizarRemoto();
+  procurarAtualizacao();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   agendarConfig();
   self.EnviagoraConfig.atualizarRemoto();
+  procurarAtualizacao();
 });
 
 agendarConfig();
+
+// ── ATUALIZACAO DA EXTENSAO ────────────────────────────────────────────────
+// O Chrome NAO recebe empurrao: ele consulta a update_url por conta propria, mais ou
+// menos a cada 5 horas. Nao existe comando que atualize as 60 maquinas na hora.
+//
+// O que da para fazer e PEDIR que ele procure agora. E isso que requestUpdateCheck faz.
+// Pendurando essa chamada no alarme de 1 hora que ja existe para o config, o ciclo cai de
+// ~5 h para ~1 h sem nenhuma infraestrutura nova. O Chrome throttla a chamada e as vezes
+// responde 'throttled' — nesse caso a procura periodica dele continua valendo normalmente,
+// entao o pior caso e exatamente o comportamento de antes.
+function procurarAtualizacao() {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.requestUpdateCheck((status, detalhes) => {
+        const versao = detalhes && detalhes.version;
+        console.log('[Enviagora] procura de atualizacao: ' + status +
+                    (versao ? ' (v' + versao + ')' : ''));
+        resolve({ status, versao });
+      });
+    } catch (e) {
+      console.warn('[Enviagora] nao consegui procurar atualizacao:', e && e.message);
+      resolve({ status: 'erro', motivo: e && e.message });
+    }
+  });
+}
+
+/* Aplicar a atualizacao sem estragar uma etiqueta no meio do caminho.
+ *
+ * Achando versao nova, o Chrome baixa mas SEGURA a troca enquanto a extensao esta em uso —
+ * as vezes por dias. chrome.runtime.reload() aplica na hora. So que recarregar o service
+ * worker no meio de um cropPdf mata aquela etiqueta: o WMS fica esperando uma resposta que
+ * nunca chega e o operador ve a impressao falhar.
+ *
+ * Por isso contamos os trabalhos em andamento e so recarregamos com a fila vazia. */
+let trabalhosEmAndamento = 0;
+let recarregarQuandoLivre = false;
+
+function talvezRecarregar() {
+  if (trabalhosEmAndamento > 0) return;
+  if (!recarregarQuandoLivre) return;
+  console.log('[Enviagora] aplicando a atualizacao agora (nenhuma etiqueta em andamento).');
+  chrome.runtime.reload();
+}
+
+chrome.runtime.onUpdateAvailable.addListener((detalhes) => {
+  console.log('[Enviagora] versao ' + (detalhes && detalhes.version) + ' pronta para aplicar.');
+  recarregarQuandoLivre = true;
+  talvezRecarregar();
+});
 
 // ── TRAVA POR SENHA ────────────────────────────────────────────────────────
 // O que a trava garante: ninguem desliga a extensao pelo popup sem a senha, e se alguem
@@ -229,6 +281,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Botao "Procurar atualizacao agora" do popup — o gatilho manual, para quando alguem
+  // nao pode esperar o ciclo de 1 hora.
+  if (msg && msg.action === 'procurarAtualizacao') {
+    (async () => {
+      const r = await procurarAtualizacao();
+      sendResponse({ ...r, versaoAtual: chrome.runtime.getManifest().version });
+    })();
+    return true;
+  }
+
   if (msg && msg.action === 'saveOperator') {
     if (msg.operatorName && msg.operatorName !== lastOperator) {
       lastOperator = msg.operatorName;
@@ -242,6 +304,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const tabId = sender && sender.tab && sender.tab.id;
     const operador = msg.operatorName || lastOperator || null;
 
+    // Segura a atualizacao enquanto esta etiqueta estiver em andamento. Ver talvezRecarregar.
+    trabalhosEmAndamento++;
+
     let respondido = false;
     const responder = (b64, via) => {
       if (respondido) return;
@@ -249,6 +314,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       console.log('[Enviagora] cropPdf ' + (Date.now() - t0) + 'ms — ' +
                   (b64 ? 'ajustado via ' + via : 'sem ajuste'));
       sendResponse({ croppedBase64: b64 });
+      trabalhosEmAndamento = Math.max(0, trabalhosEmAndamento - 1);
+      talvezRecarregar();
     };
     const guarda = setTimeout(() => responder(null, '-'), 12000);
 

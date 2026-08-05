@@ -106,6 +106,29 @@ async function recarregar() {
 
 recarregar();
 
+// ── Versão e atualização ───────────────────────────────────────────────────
+document.getElementById('versaoAtual').textContent = chrome.runtime.getManifest().version;
+
+document.getElementById('procurarAtualizacao').addEventListener('click', async () => {
+  const el = document.getElementById('versaoEstado');
+  const versao = chrome.runtime.getManifest().version;
+  el.innerHTML = 'Versão instalada: <b>' + versao + '</b> — procurando…';
+  try {
+    const r = await chrome.runtime.sendMessage({ action: 'procurarAtualizacao' });
+    // Traduz os status do Chrome para o que o operador precisa fazer (nada, na maioria).
+    const recado = {
+      update_available: 'Achei a v' + (r && r.versao) + '. Ela é aplicada assim que não ' +
+                        'houver etiqueta sendo processada — pode continuar trabalhando.',
+      no_update: 'Já está na versão mais nova.',
+      throttled: 'O Chrome pediu para esperar um pouco antes de procurar de novo. ' +
+                 'Ele continua procurando sozinho — não precisa fazer nada.'
+    }[r && r.status] || 'Não consegui procurar agora' + (r && r.motivo ? ' (' + r.motivo + ')' : '') + '.';
+    el.innerHTML = 'Versão instalada: <b>' + versao + '</b><br>' + recado;
+  } catch (e) {
+    el.innerHTML = 'Versão instalada: <b>' + versao + '</b><br>Não consegui falar com a extensão.';
+  }
+});
+
 document.getElementById('buscarConfig').addEventListener('click', async () => {
   elConfigEstado.textContent = 'Buscando…';
   const r = await CFG.atualizarRemoto();

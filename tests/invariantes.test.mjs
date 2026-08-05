@@ -423,3 +423,34 @@ test('o hook recebe o printSettleMs do content.js', () => {
   assert.match(lerSrc('hook.js'), /d\.__enviagora !== 'config'/,
     'hook.js parou de escutar o printSettleMs');
 });
+
+test('a extensao pede atualizacao de hora em hora, e nao so quando o Chrome resolve', () => {
+  // O Chrome consulta a update_url por conta propria mais ou menos a cada 5 h, e nao ha
+  // como empurrar nada para as maquinas. requestUpdateCheck pede que ele olhe agora;
+  // pendurado no alarme de 1 hora que ja existia para o config, o ciclo cai de ~5 h
+  // para ~1 h sem infraestrutura nenhuma.
+  const bg = lerSrc('background.js');
+  assert.match(bg, /chrome\.runtime\.requestUpdateCheck\(/,
+    'background.js parou de pedir a procura de atualizacao');
+  assert.match(bg, /if \(a && a\.name !== ALARME_CONFIG\) return;[\s\S]{0,200}procurarAtualizacao\(\)/,
+    'a procura de atualizacao saiu do alarme de 1 hora');
+  assert.match(bg, /action === 'procurarAtualizacao'/,
+    'sumiu o gatilho manual usado pelo botao do popup');
+  assert.match(lerSrc('popup.html'), /id="procurarAtualizacao"/,
+    'o popup perdeu o botao de procurar atualizacao');
+});
+
+test('a atualizacao nunca e aplicada no meio de uma etiqueta', () => {
+  // O Chrome baixa a versao nova e SEGURA a troca enquanto a extensao esta em uso.
+  // chrome.runtime.reload() aplica na hora — mas recarregar o service worker no meio de
+  // um cropPdf mata aquela etiqueta: o WMS espera uma resposta que nunca chega e o
+  // operador ve a impressao falhar. Dai o contador de trabalhos em andamento.
+  const bg = lerSrc('background.js');
+  assert.match(bg, /chrome\.runtime\.onUpdateAvailable\.addListener/,
+    'a extensao parou de aplicar a atualizacao assim que ela fica pronta');
+  assert.match(bg, /if \(trabalhosEmAndamento > 0\) return;/,
+    'o reload voltou a poder acontecer com etiqueta em andamento');
+  assert.match(bg, /trabalhosEmAndamento\+\+/, 'ninguem mais incrementa o contador');
+  assert.match(bg, /trabalhosEmAndamento = Math\.max\(0, trabalhosEmAndamento - 1\)/,
+    'o contador nao e mais decrementado — a extensao nunca mais se atualizaria');
+});

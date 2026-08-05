@@ -124,7 +124,22 @@ Vá marcando na [planilha de controle](#planilha-de-controle) no fim deste docum
 
 ### 3. Da segunda versão em diante
 
-**Nada.** As máquinas atualizam sozinhas em algumas horas. Você não volta nelas.
+**Nada.** As máquinas atualizam sozinhas. Você não volta nelas.
+
+Vale entender o ritmo, porque não existe empurrão: **o Chrome puxa**, ele não recebe. Por
+conta própria ele consulta a cada ~5 horas. A extensão pede uma consulta extra a cada
+**1 hora** e sempre que o Chrome abre, então o normal é a correção chegar dentro de 1 hora.
+
+Se precisar de uma máquina específica **agora**: abrir a extensão → item 9 → **Procurar
+atualização agora**. A troca acontece assim que aquela máquina não estiver processando
+nenhuma etiqueta — ninguém perde impressão no meio.
+
+Quer acelerar o galpão inteiro sem passar de mesa em mesa? Peça para **fecharem e
+reabrirem o Chrome**. Toda abertura dispara uma consulta.
+
+> **Ajuste de parâmetro é outra história e continua sendo o caminho mais rápido:** margem,
+> texto, escala e o kill switch chegam em até 1 hora **sem** publicar versão nenhuma. Veja
+> "Mudar uma configuração" abaixo.
 
 ---
 
