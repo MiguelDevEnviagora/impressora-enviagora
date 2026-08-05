@@ -44,6 +44,11 @@
     printScaling: 'none',        // 'none' = tamanho real | 'appdefault' = visualizador decide
     pickTrayByPdfSize: true,     // pede a bandeja/papel do tamanho do PDF
     printSafeMarginMm: 0,        // piso de margem opcional (0 = comportamento da v16.31)
+    // Espera, em ms, entre o PDF carregar e o print() ser chamado. Ver o comentario
+    // "ASSENTAMENTO" em hook.js: sem essa pausa o Chrome as vezes abre o dialogo e
+    // devolve "Falha ao imprimir". Se alguma maquina continuar falhando, subir aqui
+    // resolve em 1 hora, sem publicar versao nova.
+    printSettleMs: 400,
     outputWidthMm: 100,
     outputHeightMm: 150,
     marginMm: 2,
@@ -111,6 +116,8 @@
     printScaling: { tipo: 'enum', opcoes: ['none', 'appdefault'], remoto: true },
     pickTrayByPdfSize: { tipo: 'bool', remoto: true },
     printSafeMarginMm: { tipo: 'num', min: 0, max: 10, remoto: true },
+    // Teto de 5 s: acima disso o operador percebe a demora e acha que travou.
+    printSettleMs: { tipo: 'num', min: 0, max: 5000, remoto: true },
 
     // Textos e carimbos
     addHeaderText: { tipo: 'bool', remoto: true },

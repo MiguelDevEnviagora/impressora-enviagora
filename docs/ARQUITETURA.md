@@ -300,15 +300,28 @@ refatorar a lógica de impressão. Cada uma precisa de uma decisão explícita.
    e sempre centraliza. Na prática: etiqueta dos Correios com `centerContent: false` sai
    centralizada mesmo assim. Ninguém reclamou até hoje.
 
-2. **O teto do hook (8 s) é menor que o do background (12 s).** O background nunca chega a
+2. **O `afterprint` sintético é disparado 0 ms depois do `print()`.** Em `hook.js`,
+   `setTimeout(retomar, 0)` avisa o site que a impressão terminou praticamente no mesmo
+   instante em que ela começou. Se o fluxo do WMS reage ao `afterprint` carregando a
+   próxima etiqueta no mesmo iframe, ele derruba o preview que acabou de abrir — e o
+   sintoma seria o mesmo "Falha ao imprimir".
+
+   **Não foi mexido**, por dois motivos: em Chrome moderno `window.print()` bloqueia o
+   script até o diálogo fechar, o que tornaria o disparo naturalmente seguro; e esse
+   `afterprint` é o que corrigiu a tela do WMS travando depois de imprimir, um bug que
+   custou caro. Se o "Falha ao imprimir" persistir depois do assentamento
+   (`printSettleMs`), **esta é a próxima hipótese a testar** — e o teste é subir o
+   `printSettleMs` primeiro, que é grátis e reversível.
+
+3. **O teto do hook (8 s) é menor que o do background (12 s).** O background nunca chega a
    usar a folga que ele mesmo se deu. Provavelmente inofensivo, mas os dois números foram
    escolhidos em momentos diferentes e ninguém os comparou.
 
-3. **`pareceEtiquetaPdf` casa por palavra na URL** (`etiqueta`, `label`, `correios`,
+4. **`pareceEtiquetaPdf` casa por palavra na URL** (`etiqueta`, `label`, `correios`,
    `sigep`, `declaracao`, `romaneio`). Um relatório com "romaneio" no nome seria tratado
    como etiqueta e recortado em 100×150 mm.
 
-4. ~~A senha de fábrica está no código e precisa ser trocada máquina a máquina.~~
+5. ~~A senha de fábrica está no código e precisa ser trocada máquina a máquina.~~
    **Resolvido na v16.35, por decisão da operação:** a senha virou uma constante única
    (`impressora-enviagora`) e o caminho de troca saiu do popup. O motivo é bom — trocar
    senha em 60 máquinas era mais um passo manual no rollout, e senha diferente em cada

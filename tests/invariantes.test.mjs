@@ -18,6 +18,10 @@ import { spawnSync } from 'node:child_process';
 
 import { lerSrc, SRC, RAIZ } from './ajuda/carregar-extensao.mjs';
 import { idDaExtensao } from '../scripts/lib/crx.mjs';
+import { carregarExtensao } from './ajuda/carregar-extensao.mjs';
+
+carregarExtensao();
+const CFG_ESQUEMA = () => globalThis.EnviagoraConfig.ESQUEMA;
 
 test('os Correios NUNCA recebem a margem de seguranca de impressao', () => {
   // v16.32 aplicou um piso de 3 mm em todo mundo. A etiqueta dos Correios ganhou borda
@@ -377,4 +381,45 @@ test('o comando de instalacao usa Invoke-WebRequest para baixar o script', () =>
     assert.match(texto, /Invoke-WebRequest -UseBasicParsing https:\/\/raw\.githubusercontent/,
       doc + ' precisa baixar o script com Invoke-WebRequest -UseBasicParsing');
   }
+});
+
+test('o print() espera o visualizador de PDF assentar, nos DOIS caminhos', () => {
+  // O BUG: "Falha ao imprimir - Ocorreu um erro durante a impressao", intermitente, e que
+  // sumia ao desligar a extensao. O evento `load` do iframe avisa que o DOCUMENTO
+  // carregou, nao que o PDFium ja consegue imprimir. O hook.js chamava print() no instante
+  // do load; o viewer.js esperava 300 ms — e era justamente o viewer que nunca falhava.
+  const hook = lerSrc('hook.js');
+  const viewer = lerSrc('viewer.js');
+
+  assert.match(hook, /await dormir\(assentamentoMs\)/,
+    'hook.js voltou a imprimir sem esperar o visualizador de PDF assentar');
+  assert.match(viewer, /\}, assentamentoMs\)/,
+    'viewer.js voltou a usar uma espera fixa em vez do valor configuravel');
+
+  // e o valor precisa ser ajustavel remotamente: se uma maquina lenta continuar falhando,
+  // subir isso tem que valer em 1 hora, sem publicar versao nova.
+  assert.ok(CFG_ESQUEMA().printSettleMs, 'printSettleMs saiu do esquema');
+  assert.equal(CFG_ESQUEMA().printSettleMs.remoto, true,
+    'printSettleMs precisa ser configuravel remotamente — e o botao de socorro deste bug');
+});
+
+test('a impressao e serializada: uma etiqueta por vez', () => {
+  // O WMS solta etiqueta e declaracao praticamente juntas. Sem fila, a segunda trocava o
+  // src do MESMO iframe enquanto o preview da primeira abria, e o preview morria sem
+  // documento — a mesma tela de "Falha ao imprimir". O motor.js ja serializava o
+  // processamento; faltava serializar a impressao.
+  const hook = lerSrc('hook.js');
+  assert.match(hook, /let fila = Promise\.resolve\(\)/, 'a fila de impressao sumiu do hook.js');
+  assert.match(hook, /fila = fila\.then\(\(\) => imprimirAgora\(/,
+    'imprimirAjustado parou de enfileirar');
+});
+
+test('o hook recebe o printSettleMs do content.js', () => {
+  // hook.js roda no MUNDO MAIN e nao enxerga chrome.storage. Sem esta ponte ele fica
+  // preso no padrao embutido, e ajustar o valor remotamente nao teria efeito nenhum
+  // no caminho do WMS — que e exatamente onde o bug aparece.
+  assert.match(lerSrc('content.js'), /__enviagora: 'config', printSettleMs/,
+    'content.js parou de entregar o printSettleMs ao hook');
+  assert.match(lerSrc('hook.js'), /d\.__enviagora !== 'config'/,
+    'hook.js parou de escutar o printSettleMs');
 });

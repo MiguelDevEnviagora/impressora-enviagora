@@ -134,4 +134,29 @@
     const saida = await ajustar(d.b64);
     window.postMessage({ __enviagora: 'pronto', token: d.token, url: d.url, b64: saida }, '*');
   });
+
+  // ── 3) entrega ao hook o que ele não consegue ler sozinho ────────────────
+  // O hook.js roda no MUNDO MAIN e não enxerga chrome.storage. Ele precisa do
+  // printSettleMs — a pausa entre o PDF carregar e o print() ser chamado, que é o que
+  // evita o "Falha ao imprimir" do Chrome. Mandamos no começo e a cada mudança de
+  // configuração, para um ajuste remoto valer sem recarregar a página.
+  function avisarHook() {
+    try {
+      chrome.storage.local.get({ configRemoto: null }, (loc) => {
+        chrome.storage.sync.get({ printSettleMs: undefined }, (sync) => {
+          const remoto = loc && loc.configRemoto && loc.configRemoto.campos;
+          const valor = (sync && sync.printSettleMs !== undefined) ? sync.printSettleMs
+                      : (remoto && remoto.printSettleMs !== undefined) ? remoto.printSettleMs
+                      : 400;   // mesmo padrão embutido de config-padrao.js
+          window.postMessage({ __enviagora: 'config', printSettleMs: Number(valor) }, '*');
+        });
+      });
+    } catch (e) {}
+  }
+  avisarHook();
+  try {
+    chrome.storage.onChanged.addListener((m, area) => {
+      if ((area === 'local' && m.configRemoto) || (area === 'sync' && m.printSettleMs)) avisarHook();
+    });
+  } catch (e) {}
 })();

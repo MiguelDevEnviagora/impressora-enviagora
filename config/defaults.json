@@ -29,6 +29,9 @@
     "pickTrayByPdfSize": true,
     "printSafeMarginMm": 0,
 
+    "_printSettleMs": "Pausa em ms entre o PDF carregar e o Chrome ser mandado imprimir. E o que evita a tela 'Falha ao imprimir - ocorreu um erro durante a impressao': o evento de load avisa que o documento carregou, nao que o visualizador de PDF ja consegue imprimir. Se alguma maquina continuar falhando, suba para 800 ou 1200 aqui e suba a configVersion - vale em ate 1 hora, sem publicar versao nova. Maquina lenta pede valor maior.",
+    "printSettleMs": 400,
+
     "addHeaderText": true,
     "headerText": "PEDIDO PROCESSADO E EMBALADO POR ENVIAGORA",
     "headerFontSize": 8,

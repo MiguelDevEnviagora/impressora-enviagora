@@ -17,12 +17,17 @@ const auto = params.get('auto') === '1';
 // printSafeMarginMm, printScaling e pickTrayByPdfSize) e so nao dava problema porque o
 // storage ja vinha preenchido. Agora vem tudo de config-padrao.js.
 
+// Pausa entre o PDF carregar e o print() ser chamado. Este caminho já esperava 300 ms
+// fixos — e é justamente o que nunca deu "Falha ao imprimir", ao contrário do hook.js,
+// que não esperava nada. Agora o valor é o mesmo nos dois e vem do config remoto.
+let assentamentoMs = 400;
+
 function mostrar(bytes, nome, texto) {
   if (nome) document.title = nome;
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
   view.onload = () => {
     aviso.textContent = texto;
-    if (auto) setTimeout(() => { try { view.contentWindow.focus(); view.contentWindow.print(); } catch (e) {} }, 300);
+    if (auto) setTimeout(() => { try { view.contentWindow.focus(); view.contentWindow.print(); } catch (e) {} }, assentamentoMs);
     setTimeout(() => { aviso.style.display = 'none'; }, 4000);
   };
   view.src = url;
@@ -38,6 +43,7 @@ async function ajustar(bytes, nome) {
   const t0 = Date.now();
   try {
     const { s, op } = await config();
+    if (Number.isFinite(Number(s.printSettleMs))) assentamentoMs = Number(s.printSettleMs);
     const { bytes: saida, info } = await EnviagoraLabeler.processar(bytes, s, op);
     console.log('[Enviagora] ' + (Date.now() - t0) + 'ms — ' + info);
     if (saida) return mostrar(saida, nome, 'Etiqueta ajustada — imprimindo…');

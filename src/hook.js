@@ -73,13 +73,52 @@
   // ── 2. print() do iframe: espera o ajuste, troca o PDF, aí imprime ────────
   const descCW = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'contentWindow');
 
-  async function imprimirAjustado(iframe, janelaOriginal) {
+  const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /* ASSENTAMENTO — a correção do "Falha ao imprimir".
+   *
+   * O evento `load` do iframe avisa que o DOCUMENTO carregou, e não que o visualizador
+   * de PDF do Chrome (PDFium) já consegue imprimir. Chamando print() no instante do load,
+   * o preview às vezes não acha documento nenhum e o Chrome mostra:
+   *   "Falha ao imprimir — Ocorreu um erro durante a impressão."
+   * Intermitente de propósito: depende da velocidade da máquina e do tamanho do PDF.
+   *
+   * O viewer.js já esperava 300 ms depois do load antes de imprimir — e é justamente o
+   * caminho que nunca deu esse erro. Aqui não havia espera nenhuma.
+   *
+   * O valor vem do config remoto (printSettleMs), então dá para subir em todas as
+   * máquinas em 1 hora, sem publicar versão nova, se alguma continuar falhando. O
+   * content.js entrega o valor por postMessage: este arquivo roda no MUNDO MAIN e não
+   * enxerga chrome.storage. */
+  let assentamentoMs = 400;
+  window.addEventListener('message', (ev) => {
+    const d = ev.data;
+    if (!d || d.__enviagora !== 'config' || ev.source !== window) return;
+    if (Number.isFinite(d.printSettleMs)) assentamentoMs = d.printSettleMs;
+  });
+
+  /* FILA — uma impressão por vez.
+   *
+   * O WMS solta etiqueta e declaração praticamente juntas. Como imprimirAjustado é
+   * assíncrono, duas chamadas se sobrepunham: a segunda trocava o src do MESMO iframe
+   * enquanto o preview da primeira ainda estava abrindo, e o preview morria sem
+   * documento. O motor.js já serializava o processamento; faltava serializar a impressão. */
+  let fila = Promise.resolve();
+
+  function imprimirAjustado(iframe, janelaOriginal) {
+    fila = fila.then(() => imprimirAgora(iframe, janelaOriginal)).catch((e) => {
+      console.warn('[Enviagora] impressão falhou:', e && e.message);
+    });
+    return fila;
+  }
+
+  async function imprimirAgora(iframe, janelaOriginal) {
     let alvo = janelaOriginal;
     try {
       const src = String(iframe.src || '');
       const reg = pendentes.get(src);
       if (reg) {
-        const nova = await reg.promessa;           // espera o ajuste (teto de 12s)
+        const nova = await reg.promessa;           // espera o ajuste (teto de 8s)
         if (nova) {
           await new Promise((resolve) => {
             let feito = false;
@@ -88,8 +127,29 @@
             setTimeout(ok, 4000);
             iframe.src = nova;                     // troca o PDF NO MESMO IFRAME
           });
+
+          // Deixa o visualizador de PDF terminar de subir antes de mandar imprimir.
+          await dormir(assentamentoMs);
+
+          // O site pode ter mexido no iframe enquanto esperávamos. Imprimir um iframe
+          // que saiu da página, ou que já aponta para outra coisa, é a mesma tela de
+          // "Falha ao imprimir" — só que aí a culpa não é do assentamento.
+          if (!iframe.isConnected) {
+            console.warn('[Enviagora] o iframe saiu da página antes de imprimir — desistindo.');
+            return;
+          }
+          if (String(iframe.src || '') !== nova) {
+            console.warn('[Enviagora] o site trocou o PDF do iframe no meio do caminho — ' +
+                         'imprimindo o que está lá agora.');
+          }
+
           try { alvo = descCW.get.call(iframe); } catch (e) {}
-          console.log('[Enviagora] etiqueta ajustada — imprimindo a versão nova.');
+          if (!alvo) {
+            console.warn('[Enviagora] iframe sem janela após a troca — desistindo.');
+            return;
+          }
+          console.log('[Enviagora] etiqueta ajustada — imprimindo a versão nova (assentamento ' +
+                      assentamentoMs + 'ms).');
         } else {
           console.warn('[Enviagora] sem ajuste a tempo — imprimindo o original.');
         }

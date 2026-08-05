@@ -58,9 +58,30 @@ test('os padroes unificados batem campo a campo com a v16.33', () => {
   }
 });
 
+/* Campos que NASCERAM depois da v16.33. Cada um entra aqui com a versao e o motivo — a
+   lista existe para que "apareceu um campo novo" seja sempre uma decisao registrada, e
+   nunca um efeito colateral que ninguem notou. */
+const NOVOS_DEPOIS_DA_v16_33 = {
+  // v16.35.1 — pausa entre o PDF carregar e o print() ser chamado. Sem ela o Chrome as
+  // vezes abre o dialogo e devolve "Falha ao imprimir - ocorreu um erro durante a
+  // impressao". Ver o comentario "ASSENTAMENTO" em hook.js.
+  printSettleMs: 400
+};
+
 test('nao sobrou nenhum campo a mais nem a menos', () => {
   const atuais = Object.keys(CFG.PADRAO).filter((k) => k !== 'settingsSchemaVersion').sort();
-  assert.deepEqual(atuais, Object.keys(PADRAO_v16_33).sort());
+  const esperados = [...Object.keys(PADRAO_v16_33), ...Object.keys(NOVOS_DEPOIS_DA_v16_33)].sort();
+  assert.deepEqual(atuais, esperados,
+    'campo novo ou removido sem registro. Se for de proposito, declare em ' +
+    'NOVOS_DEPOIS_DA_v16_33 com a versao e o motivo.');
+});
+
+test('os campos novos tem o valor declarado', () => {
+  for (const [campo, valor] of Object.entries(NOVOS_DEPOIS_DA_v16_33)) {
+    assert.equal(CFG.PADRAO[campo], valor,
+      campo + ' mudou de padrao — era ' + JSON.stringify(valor) +
+      ', virou ' + JSON.stringify(CFG.PADRAO[campo]));
+  }
 });
 
 test('as tres configuracoes mortas nao voltaram', () => {
