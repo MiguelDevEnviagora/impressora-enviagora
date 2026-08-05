@@ -525,3 +525,15 @@ test('toda partida deixa uma prova de vida no diagnostico', () => {
   assert.match(lerSrc('background.js'), /registrar\('extensao-ligou'/,
     'sumiu a prova de vida: um diagnostico vazio volta a ser ambiguo');
 });
+
+test('quando o Chrome limita a busca, o popup diz o que FAZER', () => {
+  // A primeira versao respondia "nao precisa fazer nada" ao 'throttled' — inutil para
+  // quem clicou justamente porque precisa da versao nova agora. O botao "Atualizar" do
+  // chrome://extensions e uma busca iniciada pelo usuario e nao passa pelo mesmo limite.
+  const popup = lerSrc('popup.js');
+  assert.doesNotMatch(popup, /throttled[\s\S]{0,300}não precisa fazer nada/,
+    'a mensagem de throttled voltou a mandar o operador nao fazer nada');
+  assert.match(popup, /r\.status === 'throttled'/, 'sumiu o tratamento do throttled');
+  assert.match(popup, /chrome\.tabs\.create\(\{ url: 'chrome:\/\/extensions' \}\)/,
+    'sumiu o atalho para o caminho que realmente forca a atualizacao');
+});

@@ -116,14 +116,34 @@ document.getElementById('procurarAtualizacao').addEventListener('click', async (
   try {
     const r = await chrome.runtime.sendMessage({ action: 'procurarAtualizacao' });
     // Traduz os status do Chrome para o que o operador precisa fazer (nada, na maioria).
+    // O 'throttled' merece tratamento proprio. A mensagem anterior dizia "nao precisa
+    // fazer nada" — inutil justamente para quem clicou porque PRECISA da versao nova
+    // agora. O botao "Atualizar" do chrome://extensions e uma busca iniciada pelo
+    // usuario e nao passa por este limite, entao e para la que mandamos a pessoa.
     const recado = {
       update_available: 'Achei a v' + (r && r.versao) + '. Ela é aplicada assim que não ' +
                         'houver etiqueta sendo processada — pode continuar trabalhando.',
       no_update: 'Já está na versão mais nova.',
-      throttled: 'O Chrome pediu para esperar um pouco antes de procurar de novo. ' +
-                 'Ele continua procurando sozinho — não precisa fazer nada.'
+      throttled: 'O Chrome limita de quanto em quanto tempo eu posso procurar, e ainda ' +
+                 'não liberou. <b>Se você precisa da versão nova agora</b>, use o botão ' +
+                 'abaixo e clique em <b>Atualizar</b>, no topo da página que abrir. ' +
+                 'Esse caminho não tem limite.'
     }[r && r.status] || 'Não consegui procurar agora' + (r && r.motivo ? ' (' + r.motivo + ')' : '') + '.';
+
     el.innerHTML = 'Versão instalada: <b>' + versao + '</b><br>' + recado;
+
+    if (r && r.status === 'throttled') {
+      const b = document.createElement('button');
+      b.className = 'btn-mini btn-dark';
+      b.style.cssText = 'width:100%;margin-top:8px';
+      b.textContent = 'Abrir chrome://extensions';
+      // Extensao pode abrir chrome://extensions por chrome.tabs.create; digitar o
+      // endereco a mao e mais um passo para errar em 60 maquinas.
+      b.addEventListener('click', () => {
+        try { chrome.tabs.create({ url: 'chrome://extensions' }); } catch (e) {}
+      });
+      el.appendChild(b);
+    }
   } catch (e) {
     el.innerHTML = 'Versão instalada: <b>' + versao + '</b><br>Não consegui falar com a extensão.';
   }
