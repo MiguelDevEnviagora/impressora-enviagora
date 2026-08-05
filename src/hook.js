@@ -319,7 +319,9 @@
     window.print = function () {
       const reg = pendentes.get(String(location.href));
       if (reg) {
+        logar('print-doc-pedido', {});
         reg.promessa.then((nova) => {
+          logar('print-doc-ajuste', { ok: Boolean(nova) });
           if (nova) location.replace(nova); else origPrint();
         });
         return;
@@ -337,7 +339,30 @@
         logar('print-tela-bloqueado', { desdeOEco });
         return;
       }
+      logar('print-pagina', { desdeOEco });
       return origPrint();
     };
   }
+
+  /* REDE DE SEGURANCA DO DIAGNOSTICO (v16.36.4)
+   *
+   * O log de uma falha real veio com DUAS etiquetas ajustadas (crop-ok) e ZERO eventos de
+   * impressao. Ou seja: a impressao aconteceu por um caminho que a extensao nao intercepta,
+   * e nos so descobrimos isso pela AUSENCIA de linhas — o pior jeito possivel de descobrir.
+   *
+   * `beforeprint` dispara sempre que ESTE frame vai para a impressora, tenha sido a
+   * extensao quem pediu ou nao (Ctrl+P, botao do site, script de dentro da pagina). Nao
+   * cobre o frame do visualizador de PDF do Chrome, onde nenhum script nosso roda — mas
+   * cobre a janela do WMS, que e onde a folha preta nasce.
+   *
+   * Registrar aqui separa duas hipoteses que hoje se confundem: "o print nunca aconteceu"
+   * e "o print aconteceu sem passar por nos". */
+  try {
+    window.addEventListener('beforeprint', () => {
+      logar('print-beforeprint', {
+        topo: window.top === window,
+        desdeUltimoPrint: ultimoPrint ? Date.now() - ultimoPrint : -1
+      });
+    });
+  } catch (e) { /* nunca quebra a pagina */ }
 })();

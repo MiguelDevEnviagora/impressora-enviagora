@@ -120,6 +120,30 @@
     });
   }
 
+  /* AUSENCIA TAMBEM E INFORMACAO — e e a mais facil de nao enxergar.
+   *
+   * Um log real chegou com duas etiquetas ajustadas e NENHUM evento de impressao. A
+   * informacao estava toda ali, mas na forma de linhas que nao existiam: para ler isso e
+   * preciso saber de cor quais eventos deveriam aparecer. Estas duas linhas dizem em
+   * portugues o que a falta de linha significa, para quem abrir o arquivo nao precisar
+   * saber. Sao SUSPEITAS, nao veredito — por isso a palavra "provavel" fica de fora e o
+   * texto diz o que observar, nao o que concluir. */
+  function pistas(eventos) {
+    const tem = (p) => eventos.some((e) => String(e.tipo || '').startsWith(p));
+    const fora = [];
+    if (tem('crop') && !tem('print')) {
+      fora.push('ATENCAO: houve etiqueta ajustada, mas NENHUM evento de impressao foi',
+                'registrado. A impressao saiu por um caminho que a extensao nao acompanha.',
+                'Se a pagina do WMS ficou aberta desde antes da ultima atualizacao da',
+                'extensao, recarregue com F5 e repita — e a causa mais comum.');
+    }
+    if (!eventos.length) {
+      fora.push('ATENCAO: nenhum evento. Se a extensao imprimiu nesta maquina, o problema',
+                'esta na propria caixa-preta, e nao na impressao.');
+    }
+    return fora.length ? ['--- leitura rapida ---', ...fora, ''] : [];
+  }
+
   /* Monta o texto que o suporte vai ler. Vai junto o contexto que sempre e a primeira
      pergunta: que versao, que Chrome, que config, ha quanto tempo. */
   async function relatorio(extra) {
@@ -141,6 +165,7 @@
       '=== IMPRESSORA ENVIAGORA — diagnostico ===',
       ...Object.entries(cab).map(([k, v]) => k + ': ' + v),
       '',
+      ...pistas(eventos),
       '--- eventos (mais antigo primeiro) ---',
       ...linhas,
       '',

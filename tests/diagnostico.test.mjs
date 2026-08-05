@@ -142,3 +142,29 @@ test('o popup deixa tirar o diagnostico da maquina', () => {
   assert.match(lerSrc('popup.js'), /action: 'diagnostico'/,
     'popup.js parou de pedir o relatorio ao background');
 });
+
+test('o relatorio avisa quando houve etiqueta e nao houve impressao', async () => {
+  // A falha de producao que motivou isto: duas etiquetas ajustadas, zero eventos de
+  // impressao. A informacao estava no arquivo — na forma de linhas que faltavam. Quem le
+  // nao tem obrigacao de saber de cor quais eventos deveriam estar la.
+  fingirStorage();
+  await DIAG.limparTudo();
+  DIAG.registrar('crop-ok', { ms: 371, via: 'motor (recorte por leitura)' });
+  await esperar(20);
+
+  const txt = await DIAG.relatorio();
+  assert.match(txt, /NENHUM evento de impressao/, 'o relatorio nao avisa da ausencia');
+  assert.match(txt, /F5/, 'o relatorio avisa do problema mas nao diz o que fazer');
+});
+
+test('o relatorio nao inventa aviso quando o fluxo foi inteiro', async () => {
+  fingirStorage();
+  await DIAG.limparTudo();
+  DIAG.registrar('crop-ok', { ms: 371 });
+  DIAG.registrar('print-chamado', { ms: 1 });
+  await esperar(20);
+
+  const txt = await DIAG.relatorio();
+  assert.doesNotMatch(txt, /NENHUM evento de impressao/,
+    'o aviso aparece mesmo com a impressao registrada — vira ruido e ninguem le mais');
+});

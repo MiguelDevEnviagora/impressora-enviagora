@@ -548,3 +548,51 @@ test('nenhum rotulo do popup traz "(recomendado)" escrito na mao', () => {
   assert.match(lerSrc('popup.js'), /padrão da empresa/,
     'sumiu a marcacao dinamica do padrao vigente no seletor');
 });
+
+test('o log da rota do motor nao afirma transportadora', () => {
+  /* CICATRIZ: uma etiqueta da J&T de 76x130 mm caiu no motor e o log dizia
+   *   crop-ok  via=motor (Correios/codigo de barras)
+   * A extensao nao havia identificado Correios coisa nenhuma — nenhuma regra bateu, e o
+   * motor e simplesmente a rota de quem sobrou. O rotulo fez perder tempo procurando um
+   * bug de deteccao que nao existia. Rotulo de ROTA nunca deve parecer veredito. */
+  const src = lerSrc('background.js');
+  const rotas = [...src.matchAll(/responder\([^,]+,\s*'([^']+)'/g)].map((m) => m[1]);
+  const doMotor = rotas.filter((r) => r.startsWith('motor'));
+  assert.ok(doMotor.length, 'sumiu a rota do motor do background.js');
+  for (const r of doMotor) {
+    assert.doesNotMatch(r, /correios|shopee|amazon|mercado|j&t|jt/i,
+      'a rota "' + r + '" nomeia transportadora — quem cai no motor e justamente ' +
+      'a etiqueta que a deteccao NAO reconheceu');
+  }
+});
+
+test('o log registra o que a deteccao respondeu, e nao so a rota', () => {
+  // Sem isto, "foi pro motor" e tudo o que se sabe. Com o tamanho e o veredito no log,
+  // da para responder "por que foi pro motor?" sem pedir o PDF de volta ao operador.
+  const src = lerSrc('background.js');
+  assert.match(src, /registrar\('crop-entrou'/, 'o background parou de registrar a entrada');
+  assert.match(src, /detectada:/, 'o log da entrada perdeu o veredito da deteccao');
+  assert.match(src, /mm:/, 'o log da entrada perdeu o tamanho da pagina');
+});
+
+test('a prova de vida nao registra a cada acordada do service worker', () => {
+  /* CICATRIZ: em Manifest V3 o service worker acorda e morre o tempo todo. Um log de 10
+   * minutos veio com quatro "extensao-ligou", que parecem quatro reinicios e nao sao.
+   * Ruido empurra para fora do buffer o evento raro que interessa. */
+  const src = lerSrc('background.js');
+  assert.match(src, /INTERVALO_LIGOU_MS/, 'a prova de vida voltou a registrar sem estrangular');
+  assert.match(src, /mudouVersao/,
+    'a prova de vida precisa registrar SEMPRE que a versao mudar — e a prova de que a ' +
+    'atualizacao chegou naquela maquina');
+});
+
+test('todo caminho que manda imprimir deixa rastro', () => {
+  /* CICATRIZ: uma falha real veio com crop-ok e ZERO eventos de impressao, porque os
+   * caminhos da secao 3 do hook (o documento ELE MESMO e o PDF) nao logavam nada. */
+  const src = lerSrc('hook.js');
+  for (const evento of ['print-pedido', 'print-chamado', 'print-doc-pedido',
+                        'print-pagina', 'print-beforeprint']) {
+    assert.match(src, new RegExp("logar\\('" + evento + "'"),
+      'hook.js parou de registrar ' + evento + ' — uma impressao volta a sair sem rastro');
+  }
+});

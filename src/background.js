@@ -94,9 +94,39 @@ agendarConfig();
 // Prova de vida: garante que o diagnostico NUNCA volte vazio numa maquina que rodou.
 // Se o arquivo baixado nao tiver nem esta linha, o problema e a propria caixa-preta —
 // e nao "nao aconteceu nada". Foi exatamente essa duvida que a v16.36.0 gerou.
-self.EnviagoraDiag.registrar('extensao-ligou', {
-  versao: chrome.runtime.getManifest().version
-});
+//
+// POR QUE E ESTRANGULADO (v16.36.4)
+// Este arquivo inteiro roda de novo toda vez que o service worker ACORDA, e em Manifest V3
+// ele acorda e morre o tempo todo — num log de 10 minutos apareceram quatro "extensao-ligou".
+// Lido de fora, parece que a extensao reiniciou quatro vezes; na pratica so significa que
+// o Chrome suspendeu o worker ocioso, que e o comportamento normal. Barulho num log de 300
+// linhas empurra para fora justamente o evento raro que interessa. Entao: registra no
+// maximo uma vez por hora, e sempre que a VERSAO mudar (essa linha e a prova de que a
+// atualizacao chegou naquela maquina — nunca pode ser engolida).
+const CHAVE_LIGOU = 'ultimoLigou';
+const INTERVALO_LIGOU_MS = 60 * 60 * 1000;
+
+(function provaDeVida() {
+  const versao = chrome.runtime.getManifest().version;
+  try {
+    chrome.storage.local.get({ [CHAVE_LIGOU]: null }, (i) => {
+      try {
+        const ultimo = i && i[CHAVE_LIGOU];
+        const mudouVersao = !ultimo || ultimo.versao !== versao;
+        const passouTempo = !ultimo || (Date.now() - (ultimo.t || 0)) > INTERVALO_LIGOU_MS;
+        if (!mudouVersao && !passouTempo) return;
+        chrome.storage.local.set({ [CHAVE_LIGOU]: { t: Date.now(), versao } });
+        self.EnviagoraDiag.registrar('extensao-ligou', {
+          versao,
+          motivo: mudouVersao ? (ultimo ? 'versao-nova' : 'primeira-vez') : 'periodico'
+        });
+      } catch (e) { /* prova de vida nunca derruba nada */ }
+    });
+  } catch (e) {
+    // Sem storage nao da para estrangular; melhor registrar de novo do que nao registrar.
+    self.EnviagoraDiag.registrar('extensao-ligou', { versao, motivo: 'sem-storage' });
+  }
+})();
 
 // ── ATUALIZACAO DA EXTENSAO ────────────────────────────────────────────────
 // O Chrome NAO recebe empurrao: ele consulta a update_url por conta propria, mais ou
@@ -353,18 +383,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
       // Amazon / Shopee / Mercado Livre: caminho RÁPIDO da v16.15, direto no pdf-lib.
       // Não consulta o motor — o WMS dispara o print() em seguida e não pode esperar.
-      const conhecida = await ehEtiquetaConhecida(msg.base64);
-      if (conhecida) {
+      const retrato = await ehEtiquetaConhecida(msg.base64);
+      // Fica no log ANTES de qualquer processamento: se o passo seguinte travar, ainda
+      // sabemos que PDF entrou. 'detectada=-' significa que nenhuma regra bateu.
+      self.EnviagoraDiag.registrar('crop-entrou', {
+        detectada: retrato.nome || '-',
+        paginas: retrato.paginas,
+        mm: retrato.mm
+      });
+
+      if (retrato.nome) {
         const basico = await processarBasico(msg.base64, operador);
         clearTimeout(guarda);
-        return responder(basico, 'background (' + conhecida + ')');
+        return responder(basico, 'background (' + retrato.nome + ')');
       }
 
-      // Desconhecida (Correios / J&T): tenta o motor, que faz o recorte e o código de
-      // barras. Timeout curto — se não responder rápido, segue o ajuste padrão.
+      // Nenhuma regra bateu. O motor faz o recorte por LEITURA da pagina (procura o
+      // codigo de barras), que e o caminho que funciona para Correios e J&T. Timeout
+      // curto — se nao responder rapido, segue o ajuste padrao.
+      //
+      // O nome desta rota nao afirma transportadora nenhuma, de proposito: quem cai aqui
+      // e justamente a etiqueta que a deteccao NAO reconheceu.
       if (!msg.semMotor && tabId != null) {
         const viaMotor = await pedirAoMotor(tabId, msg.base64, operador);
-        if (viaMotor) { clearTimeout(guarda); return responder(viaMotor, 'motor (Correios/código de barras)'); }
+        if (viaMotor) { clearTimeout(guarda); return responder(viaMotor, 'motor (recorte por leitura)'); }
       }
       const basico = await processarBasico(msg.base64, operador);
       clearTimeout(guarda);
@@ -547,17 +589,33 @@ function agora() {
 }
 
 // Descobre rapidinho se é uma das três etiquetas conhecidas (só lê o tamanho da página).
+// Devolve SEMPRE um retrato do PDF que chegou, e nao so o nome:
+//   { nome, paginas, mm }   nome = null quando nenhuma regra bateu.
+//
+// POR QUE DEVOLVE MAIS DO QUE O NOME
+// Uma etiqueta da J&T de 76x130 mm nao bate com regra nenhuma, cai no motor, e o log
+// so dizia "via=motor (Correios/codigo de barras)". Lendo isso, a conclusao natural — e
+// errada — e que a extensao identificou a etiqueta como Correios. Ela nao identificou
+// nada: "motor" e a ROTA de quem sobrou, nao um veredito de transportadora. Registrando
+// aqui o tamanho e o que a deteccao respondeu, o log passa a dizer o que de fato houve.
 async function ehEtiquetaConhecida(base64) {
+  const vazio = { nome: null, paginas: 0, mm: '?' };
   try {
     const bin = atob(base64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const doc = await PDFLib.PDFDocument.load(bytes.buffer, { ignoreEncryption: true });
     const pages = doc.getPages();
-    if (!pages.length) return null;
+    if (!pages.length) return vazio;
+    const { width, height } = pages[0].getSize();
+    const mm = (v) => Math.round(v / 72 * 25.4);
     const det = detectLabel(pages[0], pages.length);
-    return det ? det.name : null;
-  } catch (e) { return null; }
+    return {
+      nome: det ? det.name : null,
+      paginas: pages.length,
+      mm: mm(width) + 'x' + mm(height)
+    };
+  } catch (e) { return vazio; }
 }
 
 async function processarBasico(base64, operador) {
