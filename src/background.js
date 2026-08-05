@@ -91,6 +91,13 @@ chrome.runtime.onStartup.addListener(() => {
 
 agendarConfig();
 
+// Prova de vida: garante que o diagnostico NUNCA volte vazio numa maquina que rodou.
+// Se o arquivo baixado nao tiver nem esta linha, o problema e a propria caixa-preta —
+// e nao "nao aconteceu nada". Foi exatamente essa duvida que a v16.36.0 gerou.
+self.EnviagoraDiag.registrar('extensao-ligou', {
+  versao: chrome.runtime.getManifest().version
+});
+
 // ── ATUALIZACAO DA EXTENSAO ────────────────────────────────────────────────
 // O Chrome NAO recebe empurrao: ele consulta a update_url por conta propria, mais ou
 // menos a cada 5 horas. Nao existe comando que atualize as 60 maquinas na hora.
@@ -302,6 +309,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.action === 'diagnostico') {
     (async () => {
       if (msg.limpar) { await self.EnviagoraDiag.limparTudo(); return sendResponse({ ok: true }); }
+      if (msg.contar) return sendResponse({ ok: true, total: (await self.EnviagoraDiag.ler()).length });
       sendResponse({ ok: true, texto: await self.EnviagoraDiag.relatorio() });
     })();
     return true;

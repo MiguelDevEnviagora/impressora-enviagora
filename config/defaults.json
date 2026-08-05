@@ -36,6 +36,9 @@
     "afterprintSintetico": true,
     "bloquearPrintDaTela": true,
 
+    "_bloquearEcoDePrint": "Ignora um segundo print() que chega em menos de 1,5 s do anterior SEM ajuste proprio. O diagnostico de producao mostrou esse eco chegando 15 ms depois e caindo em cima do preview recem-aberto - e assim que aparece o 'Falha ao imprimir'. Se alguma etiqueta legitima parar de sair, ponha false e suba a configVersion.",
+    "bloquearEcoDePrint": true,
+
     "addHeaderText": true,
     "headerText": "PEDIDO PROCESSADO E EMBALADO POR ENVIAGORA",
     "headerFontSize": 8,

@@ -100,6 +100,7 @@
   let assentamentoMs = 400;
   let afterprintSintetico = true;
   let bloquearPrintDaTela = true;
+  let bloquearEcoDePrint = true;
 
   window.addEventListener('message', (ev) => {
     const d = ev.data;
@@ -109,6 +110,7 @@
       if (Number.isFinite(d.printSettleMs)) assentamentoMs = d.printSettleMs;
       if (typeof d.afterprintSintetico === 'boolean') afterprintSintetico = d.afterprintSintetico;
       if (typeof d.bloquearPrintDaTela === 'boolean') bloquearPrintDaTela = d.bloquearPrintDaTela;
+      if (typeof d.bloquearEcoDePrint === 'boolean') bloquearEcoDePrint = d.bloquearEcoDePrint;
       return;
     }
     // Eco vindo de um frame filho: ele acabou de disparar o afterprint sintetico aqui.
@@ -132,6 +134,27 @@
   let ultimoAfterprintSintetico = 0;
   const JANELA_ECO_MS = 3000;
 
+  /* GUARDA DE ECO DE IMPRESSAO — achada pelo diagnostico de producao.
+   *
+   * O QUE O DADO MOSTROU
+   *   print-chamado    assentamento=400 ms=2    <- imprime a etiqueta ajustada
+   *   print-pedido     temAjuste=false          <- 15 ms depois, OUTRO print
+   *   print-chamado    ms=1                     <- imprime NA HORA, sem assentamento
+   *
+   * Um segundo print() chega logo depois do primeiro, no MESMO iframe, sem ajuste
+   * registrado — e por isso pula o assentamento inteiro e cai em cima do preview que
+   * acabou de abrir. Dois previews ao mesmo tempo o Chrome nao faz: o segundo morre com
+   * "Falha ao imprimir".
+   *
+   * A fila que ja existia nao protegia disto. Ela espera a FUNCAO terminar, e a funcao
+   * termina assim que print() retorna — que, agora sabemos, e instantaneo.
+   *
+   * Condicao deliberadamente estreita: so pega pedido SEM ajuste proprio (temAjuste
+   * false) e dentro da janela. Um segundo documento de verdade — a declaracao, por
+   * exemplo — cria o proprio blob, chega com temAjuste true e passa batido por aqui. */
+  let ultimoPrint = 0;
+  const JANELA_ECO_PRINT_MS = 1500;
+
   /* FILA — uma impressão por vez.
    *
    * O WMS solta etiqueta e declaração praticamente juntas. Como imprimirAjustado é
@@ -153,7 +176,19 @@
     try {
       const src = String(iframe.src || '');
       const reg = pendentes.get(src);
-      logar('print-pedido', { temAjuste: Boolean(reg) });
+      const desdeUltimoPrint = Date.now() - ultimoPrint;
+      logar('print-pedido', { temAjuste: Boolean(reg), desdeUltimoPrint });
+
+      if (!reg && bloquearEcoDePrint && desdeUltimoPrint < JANELA_ECO_PRINT_MS) {
+        console.warn('[Enviagora] ignorei um segundo print() ' + desdeUltimoPrint +
+                     'ms depois do anterior, sem ajuste proprio. Ele cairia em cima do ' +
+                     'preview que acabou de abrir — e e assim que aparece o "Falha ao ' +
+                     'imprimir". Se alguma etiqueta parar de sair, desligue ' +
+                     'bloquearEcoDePrint no config remoto.');
+        logar('print-eco-bloqueado', { desdeUltimoPrint });
+        return;
+      }
+
       if (reg) {
         const tAjuste = Date.now();
         const nova = await reg.promessa;           // espera o ajuste (teto de 8s)
@@ -213,8 +248,11 @@
     const tPrint = Date.now();
     try {
       alvo.print();
-      // Em Chrome o print() so retorna quando o dialogo fecha. Um retorno quase imediato
-      // e sinal de que ele nem chegou a abrir — que e a cara do "Falha ao imprimir".
+      // NAO tire conclusao do 'ms' aqui. Eu supunha que print() so retornasse quando o
+      // dialogo fechasse, e que um retorno instantaneo denunciasse falha. O diagnostico
+      // de producao derrubou isso: impressoes que deram certo registraram ms=0, 1 e 2.
+      // Neste contexto print() retorna na hora. O 'ms' fica so como referencia.
+      ultimoPrint = Date.now();
       logar('print-chamado', { ms: Date.now() - tPrint, assentamento: assentamentoMs });
     } catch (e) {
       console.warn('[Enviagora] print falhou:', e && e.message);

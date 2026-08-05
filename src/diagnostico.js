@@ -32,10 +32,22 @@
   const CHAVE = 'diagnostico';
   const MAX_EVENTOS = 300;      // ~algumas horas de operacao normal
   const MAX_TEXTO = 300;        // corta mensagem de erro gigante
-  const ESPERA_GRAVACAO = 800;  // agrupa gravacoes para nao bater no storage a cada linha
 
-  let fila = [];
-  let agendado = null;
+  /* POR QUE NAO HA setTimeout AQUI — a v16.36.0 saiu com esse bug.
+   *
+   * A primeira versao juntava os eventos em memoria e gravava 800 ms depois, para nao
+   * bater no storage a cada linha. Parecia cuidado; era perda de dados.
+   *
+   * Em Manifest V3 o service worker E ENCERRADO quando fica ocioso, e um setTimeout puro
+   * NAO o mantem vivo — é armadilha conhecida do MV3. O worker morria antes do prazo e
+   * levava a fila junto. Resultado: imprimir uma etiqueta com sucesso e depois baixar o
+   * diagnostico devolvia um arquivo VAZIO.
+   *
+   * Agora cada evento e gravado na hora. Uma promessa encadeada serializa as gravacoes,
+   * que e o que evita a corrida do le-altera-grava quando dois eventos caem juntos. O
+   * callback do chrome.storage, esse sim, segura o worker vivo ate terminar. */
+  let cadeia = Promise.resolve();
+  let pendentes = [];           // so para o ler() nao perder o que esta a caminho do disco
 
   function encurtar(v) {
     if (v === null || v === undefined) return v;
@@ -59,48 +71,50 @@
     return saida;
   }
 
-  function gravar() {
-    agendado = null;
-    const lote = fila;
-    fila = [];
-    if (!lote.length) return;
-    try {
-      chrome.storage.local.get({ [CHAVE]: [] }, (i) => {
-        try {
-          const atual = Array.isArray(i && i[CHAVE]) ? i[CHAVE] : [];
-          const novo = atual.concat(lote).slice(-MAX_EVENTOS);
-          chrome.storage.local.set({ [CHAVE]: novo }, () => {
-            // se o set falhar (cota, storage indisponivel), simplesmente perdemos o lote
-            if (chrome.runtime && chrome.runtime.lastError) { /* silencio proposital */ }
-          });
-        } catch (e) { /* nunca propaga */ }
-      });
-    } catch (e) { /* nunca propaga */ }
+  function gravarUm(evento) {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.local.get({ [CHAVE]: [] }, (i) => {
+          try {
+            const atual = Array.isArray(i && i[CHAVE]) ? i[CHAVE] : [];
+            const novo = atual.concat([evento]).slice(-MAX_EVENTOS);
+            chrome.storage.local.set({ [CHAVE]: novo }, () => {
+              // set falhou (cota, storage fora)? perde-se este evento e a vida segue.
+              if (chrome.runtime && chrome.runtime.lastError) { /* silencio proposital */ }
+              pendentes = pendentes.filter((p) => p !== evento);
+              resolve();
+            });
+          } catch (e) { pendentes = pendentes.filter((p) => p !== evento); resolve(); }
+        });
+      } catch (e) { pendentes = pendentes.filter((p) => p !== evento); resolve(); }
+    });
   }
 
   /** Registra um evento. Dispara e esquece: NUNCA espere por isto. */
   function registrar(tipo, dados) {
     try {
-      fila.push({ t: Date.now(), tipo: String(tipo).slice(0, 40), ...limpar(dados) });
-      if (fila.length > MAX_EVENTOS) fila = fila.slice(-MAX_EVENTOS);
-      if (!agendado) agendado = setTimeout(gravar, ESPERA_GRAVACAO);
+      const evento = { t: Date.now(), tipo: String(tipo).slice(0, 40), ...limpar(dados) };
+      pendentes.push(evento);
+      if (pendentes.length > MAX_EVENTOS) pendentes = pendentes.slice(-MAX_EVENTOS);
+      cadeia = cadeia.then(() => gravarUm(evento)).catch(() => {});
     } catch (e) { /* nunca propaga */ }
   }
 
-  /** Le tudo o que esta guardado, ja com o que ainda nao foi gravado. */
+  /** Le tudo o que esta guardado, ja com o que ainda nao chegou ao disco. */
   function ler() {
     return new Promise((resolve) => {
       try {
         chrome.storage.local.get({ [CHAVE]: [] }, (i) => {
           const atual = Array.isArray(i && i[CHAVE]) ? i[CHAVE] : [];
-          resolve(atual.concat(fila));
+          const faltando = pendentes.filter((p) => !atual.includes(p));
+          resolve(atual.concat(faltando));
         });
-      } catch (e) { resolve(fila.slice()); }
+      } catch (e) { resolve(pendentes.slice()); }
     });
   }
 
   function limparTudo() {
-    fila = [];
+    pendentes = [];
     return new Promise((resolve) => {
       try { chrome.storage.local.set({ [CHAVE]: [] }, () => resolve()); } catch (e) { resolve(); }
     });

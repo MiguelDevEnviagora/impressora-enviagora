@@ -474,3 +474,54 @@ test('a extensao nao deixa a TELA do WMS ir para a impressora', () => {
   assert.match(viewer, /@media print\{[\s\S]*background:#fff !important/,
     'viewer.html perdeu a regra de impressao — o fundo #525659 voltaria a sair como um bloco preto');
 });
+
+test('um segundo print() logo apos o anterior, sem ajuste, nao cai em cima do preview', () => {
+  // ACHADO NO DIAGNOSTICO DE PRODUCAO (16:21:37, maquina do Rafael):
+  //   print-chamado  assentamento=400 ms=2   <- imprime a etiqueta ajustada
+  //   print-pedido   temAjuste=false         <- 15 ms depois, outro print
+  //   print-chamado  ms=1                    <- imprime NA HORA, sem assentamento
+  // Dois previews ao mesmo tempo o Chrome nao faz: o segundo morre com "Falha ao imprimir".
+  //
+  // A fila que ja existia NAO protegia disto: ela espera a funcao terminar, e a funcao
+  // termina assim que print() retorna — que os dados mostraram ser instantaneo.
+  const hook = lerSrc('hook.js');
+  assert.match(hook, /let ultimoPrint = 0;/, 'sumiu a marca do ultimo print');
+  assert.match(hook, /ultimoPrint = Date\.now\(\);/,
+    'o hook parou de marcar quando chamou print()');
+  assert.match(hook, /!reg && bloquearEcoDePrint && desdeUltimoPrint < JANELA_ECO_PRINT_MS/,
+    'a guarda de eco de impressao sumiu');
+
+  // A condicao precisa continuar ESTREITA: so pega pedido sem ajuste proprio. Um segundo
+  // documento de verdade cria o proprio blob, chega com temAjuste true, e nao pode ser
+  // engolido — senao a extensao passa a comer etiqueta legitima.
+  assert.match(hook, /if \(!reg && bloquearEcoDePrint/,
+    'a guarda passou a valer tambem para pedido COM ajuste — isso engole etiqueta legitima');
+});
+
+test('o diagnostico grava na hora: nada de setTimeout em service worker', () => {
+  // A v16.36.0 juntava eventos em memoria e gravava 800 ms depois. Em MV3 o service
+  // worker e encerrado quando fica ocioso e um setTimeout puro NAO o mantem vivo: o
+  // worker morria antes do prazo e levava a fila junto. O sintoma foi imprimir com
+  // sucesso e baixar um diagnostico VAZIO.
+  const diag = lerSrc('diagnostico.js');
+  assert.doesNotMatch(diag, /setTimeout\(gravar/,
+    'a gravacao voltou a ser agendada por setTimeout — em MV3 isso perde eventos');
+  assert.match(diag, /cadeia = cadeia\.then\(\(\) => gravarUm\(evento\)\)/,
+    'a gravacao serializada sumiu — volta a corrida do le-altera-grava');
+});
+
+test('o caminho do file:// tambem registra', () => {
+  // viewer.js nasceu sem diagnostico. Quem testasse abrindo um PDF do disco baixava um
+  // arquivo vazio e concluia, com razao, que a caixa-preta nao funcionava.
+  const viewer = lerSrc('viewer.js');
+  for (const evento of ['viewer-inicio', 'viewer-print', 'viewer-erro']) {
+    assert.match(viewer, new RegExp(evento), 'viewer.js parou de registrar ' + evento);
+  }
+});
+
+test('toda partida deixa uma prova de vida no diagnostico', () => {
+  // Sem isto, um arquivo vazio nao distingue "nao aconteceu nada" de "o registro esta
+  // quebrado" — foi exatamente a duvida que a v16.36.0 gerou.
+  assert.match(lerSrc('background.js'), /registrar\('extensao-ligou'/,
+    'sumiu a prova de vida: um diagnostico vazio volta a ser ambiguo');
+});

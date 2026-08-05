@@ -241,6 +241,21 @@ document.getElementById('save').addEventListener('click', () => {
 // ── Diagnóstico ────────────────────────────────────────────────────────────
 // A caixa-preta vive no background (é ele que tem o histórico completo, inclusive o que
 // o hook.js mandou do mundo MAIN). Aqui só pedimos o relatório pronto.
+// Mostra logo de cara quantos eventos existem. Sem isto, a unica forma de saber se a
+// caixa-preta esta gravando e baixar o arquivo — e um arquivo vazio nao distingue
+// "nao aconteceu nada" de "o registro esta quebrado".
+(async () => {
+  try {
+    const r = await chrome.runtime.sendMessage({ action: 'diagnostico', contar: true });
+    const el = document.getElementById('diagEstado');
+    if (r && r.ok) {
+      el.textContent = r.total > 0
+        ? r.total + ' evento(s) guardados nesta máquina.'
+        : 'Nenhum evento ainda. Imprima uma etiqueta e reabra este popup — se continuar em zero, avise quem cuida da extensão.';
+    }
+  } catch (e) {}
+})();
+
 async function pegarRelatorio() {
   const r = await chrome.runtime.sendMessage({ action: 'diagnostico' });
   if (!r || !r.ok) throw new Error('a extensão não respondeu');

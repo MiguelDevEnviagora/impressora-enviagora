@@ -72,7 +72,11 @@ const NOVOS_DEPOIS_DA_v16_33 = {
   // Os dois sao interruptores de diagnostico: dao para isolar a causa em producao, em
   // 1 hora, sem publicar versao. Ver o comentario longo em hook.js.
   afterprintSintetico: true,
-  bloquearPrintDaTela: true
+  bloquearPrintDaTela: true,
+
+  // v16.36.1 — o diagnostico de producao mostrou um segundo print() chegando 15 ms depois
+  // do primeiro, sem ajuste, caindo em cima do preview aberto. Este bloqueia esse eco.
+  bloquearEcoDePrint: true
 };
 
 test('nao sobrou nenhum campo a mais nem a menos', () => {

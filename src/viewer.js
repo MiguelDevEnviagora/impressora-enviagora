@@ -27,7 +27,16 @@ function mostrar(bytes, nome, texto) {
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
   view.onload = () => {
     aviso.textContent = texto;
-    if (auto) setTimeout(() => { try { view.contentWindow.focus(); view.contentWindow.print(); } catch (e) {} }, assentamentoMs);
+    if (auto) setTimeout(() => {
+      const tPrint = Date.now();
+      try {
+        view.contentWindow.focus();
+        view.contentWindow.print();
+        EnviagoraDiag.registrar('viewer-print', { ms: Date.now() - tPrint, assentamento: assentamentoMs });
+      } catch (e) {
+        EnviagoraDiag.registrar('viewer-print-excecao', { erro: e && e.message });
+      }
+    }, assentamentoMs);
     setTimeout(() => { aviso.style.display = 'none'; }, 4000);
   };
   view.src = url;
@@ -41,15 +50,22 @@ async function config() {
 
 async function ajustar(bytes, nome) {
   const t0 = Date.now();
+  // Caminho do file:// / link direto. Ate a v16.36.0 ele nao registrava NADA, entao quem
+  // testasse abrindo um PDF do disco baixava um diagnostico vazio e concluia, com razao,
+  // que a caixa-preta nao funcionava.
+  EnviagoraDiag.registrar('viewer-inicio', { tamanho: bytes.length, auto });
   try {
     const { s, op } = await config();
     if (Number.isFinite(Number(s.printSettleMs))) assentamentoMs = Number(s.printSettleMs);
     const { bytes: saida, info } = await EnviagoraLabeler.processar(bytes, s, op);
     console.log('[Enviagora] ' + (Date.now() - t0) + 'ms — ' + info);
+    EnviagoraDiag.registrar(saida ? 'viewer-ajustado' : 'viewer-sem-ajuste',
+                            { ms: Date.now() - t0, info });
     if (saida) return mostrar(saida, nome, 'Etiqueta ajustada — imprimindo…');
     mostrar(bytes, nome, 'Etiqueta pronta (sem ajuste)');
   } catch (e) {
     console.error('[Enviagora] Falha ao ajustar:', e);
+    EnviagoraDiag.registrar('viewer-erro', { erro: e && e.message, ms: Date.now() - t0 });
     mostrar(bytes, nome, 'Não deu para ajustar — imprimindo o original');
   }
 }

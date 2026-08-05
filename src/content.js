@@ -161,7 +161,8 @@
             __enviagora: 'config',
             printSettleMs: Number(escolher('printSettleMs', 400)),
             afterprintSintetico: escolher('afterprintSintetico', true) !== false,
-            bloquearPrintDaTela: escolher('bloquearPrintDaTela', true) !== false
+            bloquearPrintDaTela: escolher('bloquearPrintDaTela', true) !== false,
+            bloquearEcoDePrint: escolher('bloquearEcoDePrint', true) !== false
           }, '*');
         });
       });
@@ -170,7 +171,7 @@
   avisarHook();
   try {
     chrome.storage.onChanged.addListener((m, area) => {
-      const tocou = ['printSettleMs', 'afterprintSintetico', 'bloquearPrintDaTela'];
+      const tocou = ['printSettleMs', 'afterprintSintetico', 'bloquearPrintDaTela', 'bloquearEcoDePrint'];
       if ((area === 'local' && m.configRemoto) ||
           (area === 'sync' && tocou.some((k) => m[k]))) avisarHook();
     });

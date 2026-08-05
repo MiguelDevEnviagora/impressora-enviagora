@@ -56,6 +56,10 @@
     // Ignorar um print() da PAGINA disparado logo depois do nosso afterprint. E o que
     // impede a tela do WMS de sair impressa como um bloco preto.
     bloquearPrintDaTela: true,
+    // Ignorar um segundo print() que chega logo apos o anterior sem ajuste proprio. Foi
+    // o diagnostico de producao que mostrou esse eco chegando 15 ms depois e caindo em
+    // cima do preview aberto. Ver "GUARDA DE ECO DE IMPRESSAO" em hook.js.
+    bloquearEcoDePrint: true,
     outputWidthMm: 100,
     outputHeightMm: 150,
     marginMm: 2,
@@ -127,6 +131,7 @@
     printSettleMs: { tipo: 'num', min: 0, max: 5000, remoto: true },
     afterprintSintetico: { tipo: 'bool', remoto: true },
     bloquearPrintDaTela: { tipo: 'bool', remoto: true },
+    bloquearEcoDePrint: { tipo: 'bool', remoto: true },
 
     // Textos e carimbos
     addHeaderText: { tipo: 'bool', remoto: true },
