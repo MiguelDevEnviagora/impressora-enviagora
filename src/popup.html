@@ -247,10 +247,22 @@
     <div class="hint-info">Sem internet ou com o GitHub fora do ar, a extensão segue imprimindo com a última configuração que baixou. Nunca para.</div>
   </div>
 
+  <!-- ── 10. Diagnóstico ── -->
+  <div class="card">
+    <div class="card-title">10. Diagnóstico</div>
+    <div id="diagEstado" class="hint">A extensão guarda os últimos eventos desta máquina — tempos, caminhos e erros de impressão.</div>
+    <button id="baixarDiag" class="btn-mini btn-dark" style="width:100%">Baixar diagnóstico</button>
+    <button id="copiarDiag" class="btn-mini" style="width:100%;margin-top:6px">Copiar para a área de transferência</button>
+    <button id="limparDiag" class="btn-mini" style="width:100%;margin-top:6px">Limpar histórico</button>
+    <div class="hint-info">Quando uma etiqueta falhar, clique aqui logo depois e mande o arquivo para quem cuida da extensão. É com isso que o erro é corrigido.</div>
+    <div class="hint">Vai só <b>metadado</b>: horários, quanto tempo cada passo levou, qual caminho a etiqueta seguiu e a mensagem de erro. <b>Nada de conteúdo de etiqueta</b> — nem endereço, nem destinatário, nem o PDF.</div>
+  </div>
+
   <button id="save">Salvar configurações</button>
   <div id="status" class="status"></div>
 
   <script src="config-padrao.js"></script>
+  <script src="diagnostico.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -39,6 +39,9 @@ export function carregarExtensao() {
   avaliar(lerSrc('config-padrao.js'));
   if (!globalThis.EnviagoraConfig) throw new Error('config-padrao.js nao registrou EnviagoraConfig');
 
+  avaliar(lerSrc('diagnostico.js'));
+  if (!globalThis.EnviagoraDiag) throw new Error('diagnostico.js nao registrou EnviagoraDiag');
+
   carregado = true;
   return globalThis;
 }

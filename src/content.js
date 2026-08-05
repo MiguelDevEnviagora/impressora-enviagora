@@ -128,6 +128,14 @@
     if (nome) chrome.runtime.sendMessage({ action: 'saveOperator', operatorName: nome });
   } catch (e) {}
 
+  // Ponte da caixa-preta: o hook.js roda no MUNDO MAIN e nao alcanca chrome.storage.
+  // Ele manda os eventos por postMessage e nos repassamos ao background, que grava.
+  window.addEventListener('message', (ev) => {
+    const d = ev.data;
+    if (!d || d.__enviagora !== 'log' || ev.source !== window) return;
+    try { chrome.runtime.sendMessage({ action: 'log', tipo: d.tipo, dados: d.dados }); } catch (e) {}
+  });
+
   window.addEventListener('message', async (ev) => {
     const d = ev.data;
     if (!d || d.__enviagora !== 'processar' || ev.source !== window) return;

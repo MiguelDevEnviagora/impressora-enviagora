@@ -75,6 +75,13 @@
 
   const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  /* Caixa-preta. Este arquivo roda no MUNDO MAIN e nao alcanca chrome.storage, entao
+     manda o evento para o content.js, que repassa ao background. Dispara e esquece:
+     nenhum passo da impressao espera por isto, e qualquer falha aqui e engolida. */
+  function logar(tipo, dados) {
+    try { window.postMessage({ __enviagora: 'log', tipo, dados: dados || {} }, '*'); } catch (e) {}
+  }
+
   /* ASSENTAMENTO — a correção do "Falha ao imprimir".
    *
    * O evento `load` do iframe avisa que o DOCUMENTO carregou, e não que o visualizador
@@ -136,6 +143,7 @@
   function imprimirAjustado(iframe, janelaOriginal) {
     fila = fila.then(() => imprimirAgora(iframe, janelaOriginal)).catch((e) => {
       console.warn('[Enviagora] impressão falhou:', e && e.message);
+      logar('print-erro', { erro: e && e.message });
     });
     return fila;
   }
@@ -145,16 +153,24 @@
     try {
       const src = String(iframe.src || '');
       const reg = pendentes.get(src);
+      logar('print-pedido', { temAjuste: Boolean(reg) });
       if (reg) {
+        const tAjuste = Date.now();
         const nova = await reg.promessa;           // espera o ajuste (teto de 8s)
+        logar('print-ajuste', { ms: Date.now() - tAjuste, ok: Boolean(nova) });
         if (nova) {
-          await new Promise((resolve) => {
+          const tLoad = Date.now();
+          const comoTerminou = await new Promise((resolve) => {
             let feito = false;
-            const ok = () => { if (!feito) { feito = true; resolve(); } };
-            iframe.addEventListener('load', ok, { once: true });
-            setTimeout(ok, 4000);
+            const ok = (motivo) => { if (!feito) { feito = true; resolve(motivo); } };
+            iframe.addEventListener('load', () => ok('load'), { once: true });
+            setTimeout(() => ok('timeout'), 4000);
             iframe.src = nova;                     // troca o PDF NO MESMO IFRAME
           });
+          // 'timeout' aqui significa que o PDF nao terminou de carregar em 4 s. E o caso
+          // em que o print() tem mais chance de falhar — vale saber com que frequencia
+          // acontece nas maquinas de verdade.
+          logar('print-carregou', { ms: Date.now() - tLoad, via: comoTerminou });
 
           // Deixa o visualizador de PDF terminar de subir antes de mandar imprimir.
           await dormir(assentamentoMs);
@@ -164,11 +180,13 @@
           // "Falha ao imprimir" — só que aí a culpa não é do assentamento.
           if (!iframe.isConnected) {
             console.warn('[Enviagora] o iframe saiu da página antes de imprimir — desistindo.');
+            logar('print-iframe-sumiu', {});
             return;
           }
           if (String(iframe.src || '') !== nova) {
             console.warn('[Enviagora] o site trocou o PDF do iframe no meio do caminho — ' +
                          'imprimindo o que está lá agora.');
+            logar('print-src-trocado', {});
           }
 
           try { alvo = descCW.get.call(iframe); } catch (e) {}
@@ -192,7 +210,16 @@
     try { focoAnterior = document.activeElement; } catch (e) {}
 
     try { alvo.focus(); } catch (e) {}
-    try { alvo.print(); } catch (e) { console.warn('[Enviagora] print falhou:', e && e.message); }
+    const tPrint = Date.now();
+    try {
+      alvo.print();
+      // Em Chrome o print() so retorna quando o dialogo fecha. Um retorno quase imediato
+      // e sinal de que ele nem chegou a abrir — que e a cara do "Falha ao imprimir".
+      logar('print-chamado', { ms: Date.now() - tPrint, assentamento: assentamentoMs });
+    } catch (e) {
+      console.warn('[Enviagora] print falhou:', e && e.message);
+      logar('print-excecao', { erro: e && e.message, assentamento: assentamentoMs });
+    }
 
     // Devolve o foco para a pagina e avisa o site que a impressao terminou. Muitos fluxos
     // (inclusive o do Stokki) continuam a partir do afterprint — e ele nao dispara na
@@ -269,6 +296,7 @@
                      'ms depois do nosso afterprint. Isso imprimiria a TELA, nao a etiqueta. ' +
                      'Se alguma impressao legitima estiver sumindo, desligue ' +
                      'bloquearPrintDaTela no config remoto.');
+        logar('print-tela-bloqueado', { desdeOEco });
         return;
       }
       return origPrint();

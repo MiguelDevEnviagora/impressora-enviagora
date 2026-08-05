@@ -12,6 +12,7 @@
 importScripts('pdf-lib.min.js');
 importScripts('crop-etiqueta.js');
 importScripts('config-padrao.js');
+importScripts('diagnostico.js');
 
 const processedFileTabs = new Set();
 const MARCA = 'ENVIAGORA_OK';
@@ -291,6 +292,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Log vindo do hook.js / content.js. O hook roda no MUNDO MAIN e nao tem chrome.storage,
+  // entao a caixa-preta mora aqui e ele manda os eventos por aqui. Dispara e esquece.
+  if (msg && msg.action === 'log') {
+    self.EnviagoraDiag.registrar(msg.tipo, msg.dados);
+    return;
+  }
+
+  if (msg && msg.action === 'diagnostico') {
+    (async () => {
+      if (msg.limpar) { await self.EnviagoraDiag.limparTudo(); return sendResponse({ ok: true }); }
+      sendResponse({ ok: true, texto: await self.EnviagoraDiag.relatorio() });
+    })();
+    return true;
+  }
+
   if (msg && msg.action === 'saveOperator') {
     if (msg.operatorName && msg.operatorName !== lastOperator) {
       lastOperator = msg.operatorName;
@@ -311,8 +327,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const responder = (b64, via) => {
       if (respondido) return;
       respondido = true;
-      console.log('[Enviagora] cropPdf ' + (Date.now() - t0) + 'ms — ' +
-                  (b64 ? 'ajustado via ' + via : 'sem ajuste'));
+      const ms = Date.now() - t0;
+      console.log('[Enviagora] cropPdf ' + ms + 'ms — ' + (b64 ? 'ajustado via ' + via : 'sem ajuste'));
+      self.EnviagoraDiag.registrar(b64 ? 'crop-ok' : 'crop-sem-ajuste', { ms, via });
       sendResponse({ croppedBase64: b64 });
       trabalhosEmAndamento = Math.max(0, trabalhosEmAndamento - 1);
       talvezRecarregar();
@@ -347,6 +364,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })().catch((e) => {
       clearTimeout(guarda);
       console.error('[Enviagora] cropPdf falhou:', e && e.message);
+      self.EnviagoraDiag.registrar('crop-erro', { erro: e && e.message });
       responder(null, '-');
     });
 
@@ -361,7 +379,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Motor enxuto: só o necessário para o recorte dos Correios. A reconstrução do código
 // de barras (J&T) saiu — ela varria a imagem inteira linha por linha e era o que fazia a
 // janela de impressão ficar carregando.
-const MOTOR_ARQUIVOS = ['lib/pdf.min.js', 'pdf-lib.min.js', 'crop-etiqueta.js', 'config-padrao.js', 'labeler.js', 'motor.js'];
+const MOTOR_ARQUIVOS = ['lib/pdf.min.js', 'pdf-lib.min.js', 'crop-etiqueta.js', 'config-padrao.js', 'diagnostico.js', 'labeler.js', 'motor.js'];
 const motorNaAba = new Map();   // tabId -> Promise de injeção
 
 // O motor responde ao ping? (o service worker pode ter sido suspenso e perdido o mapa)
@@ -417,7 +435,12 @@ function pedirAoMotor(tabId, base64, operatorName) {
     if (!ok) return resolve(null);
 
     let pronto = false;
-    const prazo = setTimeout(() => { if (!pronto) { pronto = true; resolve(null); } }, 8000);
+    const prazo = setTimeout(() => {
+      if (pronto) return;
+      pronto = true;
+      self.EnviagoraDiag.registrar('motor-timeout', { ms: 8000 });
+      resolve(null);
+    }, 8000);
     try {
       chrome.tabs.sendMessage(tabId, { action: 'motorProcessar', base64, operatorName },
         { frameId: 0 }, (resp) => {
@@ -426,6 +449,7 @@ function pedirAoMotor(tabId, base64, operatorName) {
           clearTimeout(prazo);
           if (chrome.runtime.lastError) {
             console.warn('[Enviagora] motor não respondeu:', chrome.runtime.lastError.message);
+          self.EnviagoraDiag.registrar('motor-mudo', { erro: chrome.runtime.lastError.message });
             resolve(null); return;
           }
           resolve((resp && resp.b64) || null);

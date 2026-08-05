@@ -238,6 +238,60 @@ document.getElementById('save').addEventListener('click', () => {
   if (remover.length) chrome.storage.sync.remove(remover, aplicar); else aplicar();
 });
 
+// ── Diagnóstico ────────────────────────────────────────────────────────────
+// A caixa-preta vive no background (é ele que tem o histórico completo, inclusive o que
+// o hook.js mandou do mundo MAIN). Aqui só pedimos o relatório pronto.
+async function pegarRelatorio() {
+  const r = await chrome.runtime.sendMessage({ action: 'diagnostico' });
+  if (!r || !r.ok) throw new Error('a extensão não respondeu');
+  return r.texto;
+}
+
+function nomeArquivo() {
+  const n = new Date(), p2 = (x) => String(x).padStart(2, '0');
+  return 'diagnostico-enviagora-' + n.getFullYear() + p2(n.getMonth() + 1) + p2(n.getDate()) +
+         '-' + p2(n.getHours()) + p2(n.getMinutes()) + '.txt';
+}
+
+document.getElementById('baixarDiag').addEventListener('click', async () => {
+  const el = document.getElementById('diagEstado');
+  try {
+    const texto = await pegarRelatorio();
+    // Âncora com download: não precisa da permissão "downloads" só para isto.
+    const url = URL.createObjectURL(new Blob([texto], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    el.textContent = 'Arquivo gerado — está na sua pasta de Downloads.';
+  } catch (e) {
+    el.textContent = 'Não consegui gerar (' + e.message + ').';
+  }
+});
+
+document.getElementById('copiarDiag').addEventListener('click', async () => {
+  const el = document.getElementById('diagEstado');
+  try {
+    await navigator.clipboard.writeText(await pegarRelatorio());
+    el.textContent = 'Copiado. Pode colar num e-mail ou no WhatsApp.';
+  } catch (e) {
+    el.textContent = 'Não consegui copiar (' + e.message + ') — use o botão de baixar.';
+  }
+});
+
+document.getElementById('limparDiag').addEventListener('click', async () => {
+  const el = document.getElementById('diagEstado');
+  try {
+    await chrome.runtime.sendMessage({ action: 'diagnostico', limpar: true });
+    el.textContent = 'Histórico limpo. Reproduza o erro e baixe de novo — fica mais fácil de ler.';
+  } catch (e) {
+    el.textContent = 'Não consegui limpar (' + e.message + ').';
+  }
+});
+
 // ── Voltar ao padrão da empresa ────────────────────────────────────────────
 // Apaga os ajustes locais e devolve a máquina ao padrão vigente (embutido + remoto).
 // Não mexe em enabled nem em lockEnabled: estado de segurança é outra conversa.
