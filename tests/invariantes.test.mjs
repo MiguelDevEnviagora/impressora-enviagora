@@ -556,7 +556,11 @@ test('o log da rota do motor nao afirma transportadora', () => {
    * motor e simplesmente a rota de quem sobrou. O rotulo fez perder tempo procurando um
    * bug de deteccao que nao existia. Rotulo de ROTA nunca deve parecer veredito. */
   const src = lerSrc('background.js');
-  const rotas = [...src.matchAll(/responder\([^,]+,\s*'([^']+)'/g)].map((m) => m[1]);
+  // As rotas aparecem como responder(b64, 'rota') e como { b64, via: 'rota' }.
+  const rotas = [
+    ...[...src.matchAll(/responder\([^,]+,\s*'([^']+)'/g)].map((m) => m[1]),
+    ...[...src.matchAll(/via:\s*'([^']+)'/g)].map((m) => m[1])
+  ];
   const doMotor = rotas.filter((r) => r.startsWith('motor'));
   assert.ok(doMotor.length, 'sumiu a rota do motor do background.js');
   for (const r of doMotor) {
@@ -595,4 +599,40 @@ test('todo caminho que manda imprimir deixa rastro', () => {
     assert.match(src, new RegExp("logar\\('" + evento + "'"),
       'hook.js parou de registrar ' + evento + ' — uma impressao volta a sair sem rastro');
   }
+});
+
+test('a mesma etiqueta nao e processada duas vezes ao mesmo tempo', () => {
+  /* CICATRIZ: cada etiqueta do WMS entrava TRES vezes no cropPdf — duas com o PDF
+   * original (hook.js e content.js pedem por caminhos diferentes e nesta operacao os dois
+   * chegam) e uma com a nossa propria saida. As repeticoes rodavam o motor (pdf.js +
+   * canvas) no processo da pagina no momento em que a previa de impressao abre. */
+  const src = lerSrc('background.js');
+  assert.match(src, /const emVoo = new Map\(\)/, 'sumiu a deduplicacao de pedidos iguais');
+  assert.match(src, /cfg\.deduplicarCrop !== false && emVoo\.has\(chave\)/,
+    'a deduplicacao parou de ser desligavel pelo config remoto');
+  assert.match(src, /cfg\.pularJaAjustado !== false/,
+    'o atalho do PDF ja ajustado parou de ser desligavel pelo config remoto');
+});
+
+test('o PDF ja ajustado sai antes do motor, e nao depois', () => {
+  // A ordem E o conserto. A marca ja era conferida antes — dentro de processarBasico, que
+  // so roda DEPOIS de o motor ter gasto ~400 ms com um PDF que nao precisava de nada.
+  const src = lerSrc('background.js');
+  const atalho = src.indexOf('retrato.jaAjustado && cfg.pularJaAjustado');
+  const motor  = src.indexOf('await pedirAoMotor(tabId');
+  assert.ok(atalho > 0, 'sumiu o atalho do PDF ja ajustado');
+  assert.ok(motor > 0, 'sumiu a chamada do motor');
+  assert.ok(atalho < motor,
+    'o atalho do PDF ja ajustado voltou a ficar DEPOIS do motor — que e o bug que ele veio corrigir');
+});
+
+test('a chave de deduplicacao nao guarda o PDF inteiro', () => {
+  // Guardar o base64 completo como chave manteria uma copia da etiqueta — dado de cliente —
+  // viva na memoria do service worker, e o diagnostico inteiro foi escrito para nao fazer isso.
+  const src = lerSrc('background.js');
+  const fn = src.slice(src.indexOf('function chaveDoPedido'), src.indexOf('async function calcular'));
+  assert.ok(fn.length, 'sumiu chaveDoPedido');
+  assert.match(fn, /b\.slice\(0, 64\)/, 'a chave parou de usar so um pedaco do base64');
+  assert.doesNotMatch(fn, /\[b,|join\([^)]*\)\s*\+\s*b\b/, 'a chave voltou a carregar o base64 inteiro');
+  assert.match(fn, /operador/, 'a chave ignora o operador — dois operadores dividiriam a mesma etiqueta');
 });

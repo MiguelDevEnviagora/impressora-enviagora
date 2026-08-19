@@ -60,6 +60,18 @@
     // o diagnostico de producao que mostrou esse eco chegando 15 ms depois e caindo em
     // cima do preview aberto. Ver "GUARDA DE ECO DE IMPRESSAO" em hook.js.
     bloquearEcoDePrint: true,
+
+    /* v16.36.5 — dois freios de trabalho REPETIDO, achados no diagnostico de producao.
+     * Cada etiqueta do WMS entrava TRES vezes no cropPdf: duas com o PDF original (o
+     * hook.js e o content.js pedem o ajuste por caminhos diferentes, e nesta operacao os
+     * dois chegam) e uma com a NOSSA PROPRIA saida, quando o content.js roda de novo
+     * dentro do iframe ja trocado. As duas repeticoes acabavam de rodar o motor (pdf.js
+     * + canvas) no mesmo processo da pagina, no exato momento em que o Chrome abre a
+     * previa de impressao. Ver o comentario longo no cropPdf do background.js.
+     * Desligaveis pelo config remoto: se alguma etiqueta parar de sair, da para voltar
+     * ao comportamento antigo em 1 hora, sem publicar versao. */
+    pularJaAjustado: true,
+    deduplicarCrop: true,
     outputWidthMm: 100,
     outputHeightMm: 150,
     marginMm: 2,
@@ -132,6 +144,8 @@
     afterprintSintetico: { tipo: 'bool', remoto: true },
     bloquearPrintDaTela: { tipo: 'bool', remoto: true },
     bloquearEcoDePrint: { tipo: 'bool', remoto: true },
+    pularJaAjustado: { tipo: 'bool', remoto: true },
+    deduplicarCrop: { tipo: 'bool', remoto: true },
 
     // Textos e carimbos
     addHeaderText: { tipo: 'bool', remoto: true },

@@ -308,6 +308,92 @@ function pareceEtiquetaPdf(url) {
 }
 
 // ── Mensagens ───────────────────────────────────────────────────────────────
+/* ── TRABALHO REPETIDO POR ETIQUETA (v16.36.5) ─────────────────────────────────
+ *
+ * O QUE O DIAGNOSTICO DE PRODUCAO MOSTROU
+ * Uma unica etiqueta do WMS entrava TRES vezes aqui. Recortado de um log real:
+ *
+ *   22.180  crop-entrou      mm=105x148     <- 1o: o PDF original
+ *   22.294  crop-entrou      mm=105x148     <- 2o: o MESMO PDF original, 114 ms depois
+ *   22.737  print-carregou   via=load       <- o iframe ja recebeu a etiqueta ajustada
+ *   22.834  crop-entrou      mm=100x150     <- 3o: a NOSSA PROPRIA saida
+ *   23.111  crop-ok          ms=898         <- o 2o so termina aqui
+ *   23.184  print-chamado                   <- o print() sai no meio disso tudo
+ *
+ * DE ONDE VEM CADA UM
+ *   1o) o hook.js captura o blob na criacao e manda ajustar (postMessage -> content.js);
+ *   2o) o content.js TAMBEM roda dentro do frame do PDF e busca o blob por conta propria.
+ *       O comentario dele diz "se o site ja revogou o blob, quem salva e o hook" — nesta
+ *       operacao o blob NAO e revogado, entao os dois caminhos rodam, sempre;
+ *   3o) depois que o hook troca o src do iframe, o content.js roda de novo — agora dentro
+ *       da etiqueta que nos mesmos acabamos de gerar — e pede ajuste dela.
+ *
+ * POR QUE ISSO IMPORTA, E NAO E SO DESPERDICIO
+ * Os pedidos 1 e 2 vao para o MOTOR, que roda pdf.js e canvas COMO CONTENT SCRIPT, no
+ * mesmo processo de renderizacao da pagina do WMS. Ou seja: ~500 a 900 ms de trabalho
+ * pesado no exato instante em que o Chrome tenta abrir a previa de impressao. Em maquina
+ * folgada passa; em maquina apertada e assim que aparece "Falha ao imprimir". Bate com o
+ * relato de que o erro so acontece em ALGUMAS estacoes.
+ *
+ * O QUE ESTES DOIS FREIOS FAZEM
+ *   deduplicarCrop  — pedidos identicos dividem o MESMO trabalho. Mesma entrada, mesma
+ *                     saida: a resposta e igual, so nao e calculada duas vezes.
+ *   pularJaAjustado — um PDF que ja tem a nossa marca sai daqui na hora, sem motor.
+ *
+ * O que NAO foi mexido: quem chama, quando chama e o que cada caminho faz com a resposta.
+ * A logica de impressao continua exatamente a mesma; o que mudou e nao refazer duas vezes
+ * a mesma conta. Os dois sao desligaveis pelo config remoto.
+ */
+const emVoo = new Map();          // chave -> Promise<{ b64, via }>
+const JANELA_DEDUP_MS = 4000;
+
+/* A chave e o que define "o mesmo pedido". Nao usamos o base64 inteiro como chave para
+ * nao guardar uma copia do PDF na memoria do worker (nem do conteudo da etiqueta, que
+ * e dado de cliente): tamanho + comeco + fim ja separam etiquetas diferentes com folga.
+ * O operador e a rota entram porque MUDAM a saida — o nome do operador e impresso. */
+function chaveDoPedido(msg, operador) {
+  const b = String(msg.base64 || '');
+  return [b.length, b.slice(0, 64), b.slice(-64), operador || '-', msg.semMotor ? 'sm' : 'cm'].join('|');
+}
+
+/* O calculo em si, separado do protocolo de resposta para que dois pedidos iguais possam
+ * dividir a MESMA promessa. Devolve { b64, via }; b64 null significa "sem ajuste". */
+async function calcular(msg, operador, tabId, cfg) {
+  // Amazon / Shopee / Mercado Livre: caminho RAPIDO da v16.15, direto no pdf-lib.
+  // Nao consulta o motor — o WMS dispara o print() em seguida e nao pode esperar.
+  const retrato = await ehEtiquetaConhecida(msg.base64);
+  // Fica no log ANTES de qualquer processamento: se o passo seguinte travar, ainda
+  // sabemos que PDF entrou. 'detectada=-' significa que nenhuma regra bateu.
+  self.EnviagoraDiag.registrar('crop-entrou', {
+    detectada: retrato.nome || '-',
+    paginas: retrato.paginas,
+    mm: retrato.mm,
+    jaAjustado: retrato.jaAjustado
+  });
+
+  // Nossa propria saida voltando para ca. Antes disto ela ia ate o motor, gastava ~400 ms
+  // e no fim caia no mesmo lugar: processarBasico ve a marca e devolve null.
+  if (retrato.jaAjustado && cfg.pularJaAjustado !== false) {
+    return { b64: null, via: 'ja ajustado' };
+  }
+
+  if (retrato.nome) {
+    return { b64: await processarBasico(msg.base64, operador), via: 'background (' + retrato.nome + ')' };
+  }
+
+  // Nenhuma regra bateu. O motor faz o recorte por LEITURA da pagina (procura o
+  // codigo de barras), que e o caminho que funciona para Correios e J&T. Timeout
+  // curto — se nao responder rapido, segue o ajuste padrao.
+  //
+  // O nome desta rota nao afirma transportadora nenhuma, de proposito: quem cai aqui
+  // e justamente a etiqueta que a deteccao NAO reconheceu.
+  if (!msg.semMotor && tabId != null) {
+    const viaMotor = await pedirAoMotor(tabId, msg.base64, operador);
+    if (viaMotor) return { b64: viaMotor, via: 'motor (recorte por leitura)' };
+  }
+  return { b64: await processarBasico(msg.base64, operador), via: 'background (ajuste padrão)' };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // ── trava por senha (falado so pelo popup) ──
   if (msg && msg.action === 'destravar') {
@@ -381,36 +467,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const cfg = await getSettings();
       if (cfg.killSwitch) { clearTimeout(guarda); return responder(null, 'kill switch'); }
 
-      // Amazon / Shopee / Mercado Livre: caminho RÁPIDO da v16.15, direto no pdf-lib.
-      // Não consulta o motor — o WMS dispara o print() em seguida e não pode esperar.
-      const retrato = await ehEtiquetaConhecida(msg.base64);
-      // Fica no log ANTES de qualquer processamento: se o passo seguinte travar, ainda
-      // sabemos que PDF entrou. 'detectada=-' significa que nenhuma regra bateu.
-      self.EnviagoraDiag.registrar('crop-entrou', {
-        detectada: retrato.nome || '-',
-        paginas: retrato.paginas,
-        mm: retrato.mm
-      });
-
-      if (retrato.nome) {
-        const basico = await processarBasico(msg.base64, operador);
+      // DEDUPLICACAO — ver a nota longa em chaveDoPedido.
+      const chave = chaveDoPedido(msg, operador);
+      if (cfg.deduplicarCrop !== false && emVoo.has(chave)) {
+        const r = await emVoo.get(chave);
         clearTimeout(guarda);
-        return responder(basico, 'background (' + retrato.nome + ')');
+        return responder(r.b64, r.via + ' [reaproveitado]');
       }
 
-      // Nenhuma regra bateu. O motor faz o recorte por LEITURA da pagina (procura o
-      // codigo de barras), que e o caminho que funciona para Correios e J&T. Timeout
-      // curto — se nao responder rapido, segue o ajuste padrao.
-      //
-      // O nome desta rota nao afirma transportadora nenhuma, de proposito: quem cai aqui
-      // e justamente a etiqueta que a deteccao NAO reconheceu.
-      if (!msg.semMotor && tabId != null) {
-        const viaMotor = await pedirAoMotor(tabId, msg.base64, operador);
-        if (viaMotor) { clearTimeout(guarda); return responder(viaMotor, 'motor (recorte por leitura)'); }
+      const trabalho = calcular(msg, operador, tabId, cfg);
+      if (cfg.deduplicarCrop !== false) {
+        emVoo.set(chave, trabalho);
+        // Vale por alguns segundos DEPOIS de pronto, e nao so enquanto roda: os dois
+        // pedidos do mesmo PDF chegam com ~90 ms de diferenca, mas o segundo as vezes
+        // chega depois de o primeiro ja ter terminado.
+        const soltar = () => setTimeout(() => { if (emVoo.get(chave) === trabalho) emVoo.delete(chave); }, JANELA_DEDUP_MS);
+        trabalho.then(soltar, soltar);
       }
-      const basico = await processarBasico(msg.base64, operador);
+
+      const r = await trabalho;
       clearTimeout(guarda);
-      responder(basico, 'background (ajuste padrão)');
+      responder(r.b64, r.via);
     })().catch((e) => {
       clearTimeout(guarda);
       console.error('[Enviagora] cropPdf falhou:', e && e.message);
@@ -599,7 +676,7 @@ function agora() {
 // nada: "motor" e a ROTA de quem sobrou, nao um veredito de transportadora. Registrando
 // aqui o tamanho e o que a deteccao respondeu, o log passa a dizer o que de fato houve.
 async function ehEtiquetaConhecida(base64) {
-  const vazio = { nome: null, paginas: 0, mm: '?' };
+  const vazio = { nome: null, paginas: 0, mm: '?', jaAjustado: false };
   try {
     const bin = atob(base64);
     const bytes = new Uint8Array(bin.length);
@@ -610,10 +687,19 @@ async function ehEtiquetaConhecida(base64) {
     const { width, height } = pages[0].getSize();
     const mm = (v) => Math.round(v / 72 * 25.4);
     const det = detectLabel(pages[0], pages.length);
+    // Marca gravada por processarBasico e pelo labeler.js em tudo o que sai daqui. Ela ja
+    // era conferida, so que tarde demais — depois de o motor ter rodado. Ver a nota longa
+    // sobre TRABALHO REPETIDO acima.
+    let jaAjustado = false;
+    try {
+      const kw = doc.getKeywords();
+      jaAjustado = Boolean(kw && String(kw).includes(MARCA));
+    } catch (e) {}
     return {
       nome: det ? det.name : null,
       paginas: pages.length,
-      mm: mm(width) + 'x' + mm(height)
+      mm: mm(width) + 'x' + mm(height),
+      jaAjustado
     };
   } catch (e) { return vazio; }
 }

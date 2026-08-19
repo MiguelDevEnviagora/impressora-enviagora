@@ -306,6 +306,12 @@ refatorar a lógica de impressão. Cada uma precisa de uma decisão explícita.
    próxima etiqueta no mesmo iframe, ele derruba o preview que acabou de abrir — e o
    sintoma seria o mesmo "Falha ao imprimir".
 
+   **Correção da premissa (v16.36.1):** `print()` **não** bloqueia neste contexto — o
+   diagnóstico de produção registrou `print-chamado ms=0`, `ms=1` e `ms=2` em impressões
+   que deram certo. A parte "naturalmente seguro" abaixo está errada; o que protege hoje
+   é a guarda de eco (`bloquearEcoDePrint`), e ela aparece funcionando no log
+   (`print-eco-bloqueado desdeUltimoPrint=0`, em toda etiqueta).
+
    **Não foi mexido**, por dois motivos: em Chrome moderno `window.print()` bloqueia o
    script até o diálogo fechar, o que tornaria o disparo naturalmente seguro; e esse
    `afterprint` é o que corrigiu a tela do WMS travando depois de imprimir, um bug que
@@ -321,7 +327,36 @@ refatorar a lógica de impressão. Cada uma precisa de uma decisão explícita.
    `sigep`, `declaracao`, `romaneio`). Um relatório com "romaneio" no nome seria tratado
    como etiqueta e recortado em 100×150 mm.
 
-5. ~~A senha de fábrica está no código e precisa ser trocada máquina a máquina.~~
+5. **Etiqueta dos Correios em folha A4 é classificada como Shopee no caminho do WMS.**
+   Descoberto em 19/08/2026, rodando o código real contra uma etiqueta que falhou em
+   produção (`Contrato: 9912733639 PAC CONTRATO`, produzida pelo `openhtmltopdf`):
+
+   ```
+   tamanho: 595.27 x 841.88 pt = 210x297 mm   (A4 retrato, 1 página)
+   detectLabel (background.js): Shopee        <- regra "A4 retrato + 1 página"
+   ehTextoCorreios(texto):      true          <- "Contrato" + "PAC"
+   ```
+
+   Os dois caminhos discordam, e o motivo é estrutural:
+
+   - **`viewer.js` acerta.** Ele usa `labeler.js`, onde `podeCorreios` deixa o teste de
+     texto derrubar o palpite "Shopee". O log de produção confirma:
+     `viewer-ajustado info=pág 1: CORREIOS (recortada)`.
+   - **`background.js` erra.** Reconhecendo "Shopee", ele toma o **caminho rápido** e
+     nunca consulta o motor — então o teste de texto dos Correios não chega a rodar, e a
+     etiqueta é recortada no retângulo da Shopee (`bottom: 398, 300x444`).
+
+   O caminho rápido existe por um motivo real: o WMS chama `print()` logo depois, e
+   esperar o motor custaria a impressão. Fazer A4-retrato-1-página passar pelo motor
+   consertaria os Correios e **atrasaria toda etiqueta legítima da Shopee**.
+
+   **Não foi mexido: é decisão da operação, não minha.** O log traz duas ocorrências de
+   `crop-entrou detectada=Shopee mm=210x297` que podem ser Shopee de verdade ou Correios
+   mal classificado — pelo log não dá para saber. A pergunta a responder antes de mexer:
+   *as etiquetas dos Correios chegam pelo WMS, ou só pelo caminho do arquivo/link
+   (`viewer.js`)?* Se só pelo viewer, não há bug em produção e nada precisa mudar.
+
+6. ~~A senha de fábrica está no código e precisa ser trocada máquina a máquina.~~
    **Resolvido na v16.35, por decisão da operação:** a senha virou uma constante única
    (`impressora-enviagora`) e o caminho de troca saiu do popup. O motivo é bom — trocar
    senha em 60 máquinas era mais um passo manual no rollout, e senha diferente em cada

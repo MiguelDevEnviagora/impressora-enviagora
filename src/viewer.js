@@ -22,9 +22,26 @@ const auto = params.get('auto') === '1';
 // que não esperava nada. Agora o valor é o mesmo nos dois e vem do config remoto.
 let assentamentoMs = 400;
 
+/* Instrumentacao do caminho do arquivo/link (v16.36.5).
+ *
+ * Ate aqui o log terminava em `viewer-print` e a historia parava: nao dava para separar
+ * "o Chrome nem chegou a abrir a previa" de "abriu e falhou". Estes dois eventos fecham
+ * a lacuna — `beforeprint` diz que a previa abriu, `afterprint` que ela fechou. Numa
+ * impressao que deu certo os dois aparecem; numa que deu "Falha ao imprimir", o que
+ * faltar diz em que ponto ela morreu.
+ *
+ * Sao ouvintes passivos: nao seguram, nao adiam e nao cancelam nada. */
+try {
+  window.addEventListener('beforeprint', () => EnviagoraDiag.registrar('viewer-beforeprint', {}));
+  window.addEventListener('afterprint',  () => EnviagoraDiag.registrar('viewer-afterprint', {}));
+} catch (e) {}
+
 function mostrar(bytes, nome, texto) {
   if (nome) document.title = nome;
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  // O tamanho do que VAI para a impressora, e nao so o que entrou. Uma saida
+  // desproporcional ao original e o primeiro sinal de que o recorte saiu torto.
+  EnviagoraDiag.registrar('viewer-saida', { tamanhoSaida: bytes.length });
   view.onload = () => {
     aviso.textContent = texto;
     if (auto) setTimeout(() => {

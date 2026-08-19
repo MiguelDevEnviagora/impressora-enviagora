@@ -76,7 +76,14 @@ const NOVOS_DEPOIS_DA_v16_33 = {
 
   // v16.36.1 — o diagnostico de producao mostrou um segundo print() chegando 15 ms depois
   // do primeiro, sem ajuste, caindo em cima do preview aberto. Este bloqueia esse eco.
-  bloquearEcoDePrint: true
+  bloquearEcoDePrint: true,
+
+  // v16.36.5 — o diagnostico mostrou TRES cropPdf por etiqueta: duas vezes o original
+  // (hook.js e content.js pedem por caminhos diferentes) e uma vez a nossa propria saida.
+  // As repeticoes rodavam o motor junto com a abertura da previa de impressao. Estes dois
+  // cortam o trabalho repetido e sao desligaveis pelo config remoto.
+  pularJaAjustado: true,
+  deduplicarCrop: true
 };
 
 test('nao sobrou nenhum campo a mais nem a menos', () => {
