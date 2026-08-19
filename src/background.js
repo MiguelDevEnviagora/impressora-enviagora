@@ -349,11 +349,29 @@ const JANELA_DEDUP_MS = 4000;
 
 /* A chave e o que define "o mesmo pedido". Nao usamos o base64 inteiro como chave para
  * nao guardar uma copia do PDF na memoria do worker (nem do conteudo da etiqueta, que
- * e dado de cliente): tamanho + comeco + fim ja separam etiquetas diferentes com folga.
- * O operador e a rota entram porque MUDAM a saida — o nome do operador e impresso. */
+ * e dado de cliente). O operador e a rota entram porque MUDAM a saida — o nome do
+ * operador e impresso na etiqueta.
+ *
+ * POR QUE HASH DO CONTEUDO INTEIRO, E NAO SO TAMANHO + COMECO + FIM (v16.36.6)
+ * A primeira versao usava tamanho + primeiros/ultimos 64 chars. O teste de estresse
+ * derrubou isso em minutos: 20 PDFs DIFERENTES do mesmo gerador, 18 tratados como
+ * repeticao — mesmo produtor da o mesmo comeco, e dois PDFs com o MESMO tamanho ficam
+ * com o mesmo fim (o fim e o startxref, que so depende do tamanho). Colisao aqui nao e
+ * desperdicio: e a etiqueta de UM cliente saindo na encomenda de OUTRO. Entao a chave
+ * passa a ser um hash FNV-1a de TODO o conteudo — 1 a 2 ms por MB, sincrono, e continua
+ * sem guardar byte nenhum da etiqueta. */
+function hashFnv(str) {
+  let a = 0x811c9dc5, b = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193);
+    b = Math.imul(b ^ ((c * 31 + i) & 0xffff), 0x01000193);
+  }
+  return (a >>> 0).toString(36) + '.' + (b >>> 0).toString(36);
+}
 function chaveDoPedido(msg, operador) {
   const b = String(msg.base64 || '');
-  return [b.length, b.slice(0, 64), b.slice(-64), operador || '-', msg.semMotor ? 'sm' : 'cm'].join('|');
+  return [b.length, hashFnv(b), operador || '-', msg.semMotor ? 'sm' : 'cm'].join('|');
 }
 
 /* O calculo em si, separado do protocolo de resposta para que dois pedidos iguais possam

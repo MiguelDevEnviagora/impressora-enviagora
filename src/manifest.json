@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "IMPRESSORA ENVIAGORA",
-  "version": "16.36.5",
-  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.36.5: cada etiqueta e processada uma vez so, em vez de tres.",
+  "version": "16.36.6",
+  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.36.6: a chave de deduplicacao passa a cobrir o conteudo inteiro do PDF.",
   "permissions": [
     "tabs",
     "scripting",

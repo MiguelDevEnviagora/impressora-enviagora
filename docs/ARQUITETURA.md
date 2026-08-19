@@ -350,6 +350,13 @@ refatorar a lógica de impressão. Cada uma precisa de uma decisão explícita.
    esperar o motor custaria a impressão. Fazer A4-retrato-1-página passar pelo motor
    consertaria os Correios e **atrasaria toda etiqueta legítima da Shopee**.
 
+   **Atualização de 19/08:** a matriz de estresse mostrou que **3 das 7 etiquetas reais
+   dos Correios das fixtures têm exatamente essa forma** (A4, 1 página) — não é caso
+   raro. O recorte "Shopee" pega o quadrante superior esquerdo, onde a etiqueta dos
+   Correios costuma estar, e por coincidência geométrica o resultado costuma servir.
+   Proposta de correção e a pergunta que decide se ela é necessária: ver
+   [PLANO-DE-MELHORIA.md](PLANO-DE-MELHORIA.md), item P1-1.
+
    **Não foi mexido: é decisão da operação, não minha.** O log traz duas ocorrências de
    `crop-entrou detectada=Shopee mm=210x297` que podem ser Shopee de verdade ou Correios
    mal classificado — pelo log não dá para saber. A pergunta a responder antes de mexer:

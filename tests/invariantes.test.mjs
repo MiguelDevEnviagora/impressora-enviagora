@@ -630,9 +630,13 @@ test('a chave de deduplicacao nao guarda o PDF inteiro', () => {
   // Guardar o base64 completo como chave manteria uma copia da etiqueta — dado de cliente —
   // viva na memoria do service worker, e o diagnostico inteiro foi escrito para nao fazer isso.
   const src = lerSrc('background.js');
-  const fn = src.slice(src.indexOf('function chaveDoPedido'), src.indexOf('async function calcular'));
-  assert.ok(fn.length, 'sumiu chaveDoPedido');
-  assert.match(fn, /b\.slice\(0, 64\)/, 'a chave parou de usar so um pedaco do base64');
-  assert.doesNotMatch(fn, /\[b,|join\([^)]*\)\s*\+\s*b\b/, 'a chave voltou a carregar o base64 inteiro');
+  const fn = src.slice(src.indexOf('function hashFnv'), src.indexOf('async function calcular'));
+  assert.ok(fn.length, 'sumiu chaveDoPedido/hashFnv');
+  /* CICATRIZ: a primeira chave era tamanho + primeiros/ultimos 64 chars. O estresse
+   * derrubou: 20 PDFs DIFERENTES do mesmo gerador, 18 tratados como repeticao — e
+   * colisao aqui e etiqueta de UM cliente saindo na encomenda de OUTRO. A chave tem
+   * que cobrir o conteudo INTEIRO (hash), sem guardar o conteudo. */
+  assert.match(fn, /hashFnv\(b\)/, 'a chave parou de cobrir o conteudo inteiro do PDF');
+  assert.doesNotMatch(fn, /b\.slice\(0, ?64\)/, 'a chave voltou ao pedaco de 64 chars que colide');
   assert.match(fn, /operador/, 'a chave ignora o operador — dois operadores dividiriam a mesma etiqueta');
 });
