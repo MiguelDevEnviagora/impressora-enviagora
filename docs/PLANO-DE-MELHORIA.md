@@ -130,14 +130,26 @@ existe o protocolo da seção 5 — o teste que só a operação consegue fazer.
 
 ---
 
-## 4. O que já está na `main` e NÃO está publicado
+## 4. Situação — PUBLICADA em 19/08/2026
 
-- Chave de dedupe por hash de conteúdo inteiro (correção do 2.1).
-- Harness de integração + 5 testes novos (106 passando).
+**A v16.36.6 passou o portão da seção 6 e está nas 60 máquinas.** O piloto aprovou, o
+Rafael deu o OK, o Release saiu. O CRX publicado é byte a byte o mesmo que rodou no
+piloto (`sha256 82d3343580a7bca9400c96586f3c2a4a15684bf0ada4b2cc1f93db266493985d`) —
+não foi rebuildado para publicar, é o arquivo aprovado.
+
+O que ela leva:
+
+- Chave de dedupe por hash de conteúdo inteiro (correção do 2.1 — o risco de etiqueta
+  trocada da 16.36.5 deixou de existir).
+- Harness de integração + 5 testes novos (106 no total).
 - Este documento.
 
-A 16.36.5 publicada continua sendo o que as máquinas rodam. O risco conhecido dela é o
-2.1 — improvável no dia a dia, mas é O motivo para não demorar com o portão da seção 6.
+As máquinas puxam sozinhas: até ~1 h de Chrome aberto na maioria, teto realista ~5 h.
+**Depois de atualizar, a aba do WMS precisa de F5** para os scripts novos entrarem na
+página.
+
+Continua em aberto, e agora sem pressa de release: os itens P1 da seção 3 — a decisão dos
+Correios em A4 (P1-1) e a das palavras `romaneio`/`declaracao` na URL (P1-2).
 
 ---
 
@@ -168,7 +180,7 @@ Ao final, exportar os dois diagnósticos de novo.
 
 ---
 
-## 6. Portão de publicação
+## 6. Portão de publicação — cumprido para a 16.36.6
 
 ```
 correções na main  →  Fase A (2 máquinas, roteiro)  →  eu leio os diagnósticos
@@ -177,6 +189,11 @@ correções na main  →  Fase A (2 máquinas, roteiro)  →  eu leio os diagnó
                                                      →  tag → Release → updates.xml
                                                      →  60 máquinas em ~1–5 h
 ```
+
+Este é o caminho para **toda** publicação daqui em diante, e não só para a 16.36.6. O
+motivo está na seção 2.1: aquele bug não apareceu em teste de função pura nem em revisão
+de código — apareceu com o handler inteiro rodando sob carga. Publicar direto para 60
+máquinas sem passar por aqui é apostar que a próxima correção não tem um 2.1 dentro.
 
 Freios que continuam disponíveis o tempo todo, sem publicar nada:
 - `killSwitch: true` no `config/defaults.json` — desliga o ajuste em todas as máquinas
