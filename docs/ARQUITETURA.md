@@ -327,7 +327,13 @@ refatorar a lógica de impressão. Cada uma precisa de uma decisão explícita.
    `sigep`, `declaracao`, `romaneio`). Um relatório com "romaneio" no nome seria tratado
    como etiqueta e recortado em 100×150 mm.
 
-5. **Etiqueta dos Correios em folha A4 é classificada como Shopee no caminho do WMS.**
+5. ~~**Etiqueta dos Correios em folha A4 é classificada como Shopee no caminho do WMS.**~~
+   **RESOLVIDO na v16.36.7** — a operação confirmou em 20/08 que essas etiquetas chegam
+   sim pelo WMS: duas saíram com 64 mm e 61 mm de largura numa etiqueta de 100 mm. A
+   regra do A4 passou a vir marcada como palpite, e palpite agora é conferido pelo motor
+   antes de virar recorte (teto de 2 s, queda no recorte de hoje). As duas etiquetas
+   viraram fixtures de regressão em `tests/fixtures/correios-a4/`. O registro abaixo fica
+   porque explica por que a regra existia e o que ela custava.
    Descoberto em 19/08/2026, rodando o código real contra uma etiqueta que falhou em
    produção (`Contrato: 9912733639 PAC CONTRATO`, produzida pelo `openhtmltopdf`):
 

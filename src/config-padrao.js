@@ -72,6 +72,13 @@
      * ao comportamento antigo em 1 hora, sem publicar versao. */
     pularJaAjustado: true,
     deduplicarCrop: true,
+
+    /* v16.36.7 — "A4 retrato de 1 pagina" e a unica regra de deteccao sem prova nenhuma
+     * por tras: descreve etiqueta da Shopee e descreve tambem etiqueta dos Correios
+     * impressa em folha A4. Duas etiquetas dos Correios de 19/08 sairam com 64 mm e
+     * 61 mm de largura numa etiqueta de 100 mm por causa disso. Ligado, o palpite passa
+     * pelo motor antes de virar recorte. Desligado, volta o comportamento anterior. */
+    conferirA4NoMotor: true,
     outputWidthMm: 100,
     outputHeightMm: 150,
     marginMm: 2,
@@ -146,6 +153,7 @@
     bloquearEcoDePrint: { tipo: 'bool', remoto: true },
     pularJaAjustado: { tipo: 'bool', remoto: true },
     deduplicarCrop: { tipo: 'bool', remoto: true },
+    conferirA4NoMotor: { tipo: 'bool', remoto: true },
 
     // Textos e carimbos
     addHeaderText: { tipo: 'bool', remoto: true },

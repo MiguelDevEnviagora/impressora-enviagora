@@ -105,13 +105,20 @@ existe o protocolo da seção 5 — o teste que só a operação consegue fazer.
 
 ### P1 — decisões tuas (mudam comportamento; cada uma com botão de desligar remoto)
 
-1. **Correios A4 no caminho do WMS.** Proposta: antes do caminho rápido, farejar o texto
-   do PDF no próprio background (pdf-lib, sem canvas, ~5–10 ms) — se cheirar a Correios
-   ("Contrato" + SEDEX/PAC, código AA…BR), mandar ao motor em vez de recortar como Shopee.
-   Custo: +5–10 ms por etiqueta A4. Risco: baixo, com chave remota para desligar.
-   **Pergunta que decide se isso é necessário: as etiquetas dos Correios chegam pelo WMS,
-   ou só por arquivo/link (viewer)?** No log de ontem, todas as dos Correios vieram pelo
-   viewer — se for sempre assim, este item pode esperar.
+1. ~~**Correios A4 no caminho do WMS.**~~ **RESOLVIDO na v16.36.7.** A pergunta que estava
+   aqui — se essas etiquetas chegam pelo WMS ou só pelo viewer — foi respondida pela
+   operação em 20/08, e a resposta é **pelo WMS**: duas etiquetas dos Correios saíram
+   recortadas em 10×15 com a etiqueta pequena no meio do papel, 64 mm e 61 mm de largura
+   numa etiqueta de 100 mm.
+
+   A correção não foi farejar texto no background (inviável: essas etiquetas usam fontes
+   CID `Identity-H`, em que o texto é um índice de glifo — ler exigiria interpretar o
+   CMap `ToUnicode`, código novo e frágil justamente no caminho crítico). Foi mais
+   simples: a regra do A4 passou a vir **marcada como palpite**, e palpite é conferido
+   pelo motor antes de virar recorte. O motor já sabe ler o texto (pdf.js faz o CMap) e
+   medir onde a tinta está. Etiqueta da Shopee de verdade recebe o mesmo recorte de hoje;
+   Correios em A4 passa a ser recortada na tinta. Teto de 2 s, queda no recorte de hoje,
+   e `conferirA4NoMotor: false` desliga pelo config remoto.
 2. **"romaneio"/"declaracao" na URL** (caminho 6): um PDF de romaneio aberto por link vira
    100×150. Proposta: exigir `.pdf` na URL **e** remover as duas palavras da lista, ou
    listar por domínio. Precisa de ti: existe romaneio/declaração que os operadores

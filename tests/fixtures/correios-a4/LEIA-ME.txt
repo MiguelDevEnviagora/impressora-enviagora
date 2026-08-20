@@ -1,0 +1,17 @@
+Etiquetas dos CORREIOS impressas em folha A4 — o caso que quebrou o palpite de deteccao.
+
+Vieram da operacao em 20/08/2026. As duas sairam recortadas em 10x15 com a etiqueta
+PEQUENA no meio do papel: 64 mm e 61 mm de largura numa etiqueta de 100 mm.
+
+A causa: sao A4 de 1 pagina, o que faz a regra de tamanho dizer "Shopee". O caminho
+rapido do background entao recortava o retangulo FIXO (0,398)-(300,842) sem olhar onde
+a etiqueta esta de verdade — e ampliava esse retangulo, nao a etiqueta.
+
+O que estas fixtures travam (tests/deteccao-a4.test.mjs):
+  1. o detector geometrico NAO dispara nelas (nao sao Amazon);
+  2. a regra de tamanho realmente diz "Shopee", e diz marcada como PALPITE;
+  3. o texto delas identifica Correios sem ambiguidade (codigo AA999999999BR e
+     Contrato + SEDEX/PAC), que e o que o motor usa para corrigir o palpite.
+
+Nao ha dado de cliente exposto aqui alem do que ja esta impresso na etiqueta; sao
+etiquetas reais de producao e servem de regressao justamente por isso.

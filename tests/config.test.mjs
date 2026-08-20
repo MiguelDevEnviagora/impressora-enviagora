@@ -83,7 +83,12 @@ const NOVOS_DEPOIS_DA_v16_33 = {
   // As repeticoes rodavam o motor junto com a abertura da previa de impressao. Estes dois
   // cortam o trabalho repetido e sao desligaveis pelo config remoto.
   pularJaAjustado: true,
-  deduplicarCrop: true
+  deduplicarCrop: true,
+
+  // v16.36.7 — o palpite "A4 retrato de 1 pagina = Shopee" passa a ser conferido pelo
+  // motor antes de virar recorte. Duas etiquetas dos Correios sairam pequenas por causa
+  // dele: 64 mm e 61 mm de largura numa etiqueta de 100 mm.
+  conferirA4NoMotor: true
 };
 
 test('nao sobrou nenhum campo a mais nem a menos', () => {

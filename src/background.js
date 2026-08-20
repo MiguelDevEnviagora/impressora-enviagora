@@ -345,6 +345,10 @@ function pareceEtiquetaPdf(url) {
  * a mesma conta. Os dois sao desligaveis pelo config remoto.
  */
 const emVoo = new Map();          // chave -> Promise<{ b64, via }>
+// Teto de espera do motor quando ele so esta CONFERINDO um palpite. Curto de proposito:
+// aqui existe um recorte de reserva perfeitamente utilizavel (o de hoje), entao esperar
+// os 8 s do caminho normal seria trocar uma etiqueta pequena por uma etiqueta atrasada.
+const TETO_MOTOR_PALPITE_MS = 2000;
 const JANELA_DEDUP_MS = 4000;
 
 /* A chave e o que define "o mesmo pedido". Nao usamos o base64 inteiro como chave para
@@ -393,6 +397,39 @@ async function calcular(msg, operador, tabId, cfg) {
   // e no fim caia no mesmo lugar: processarBasico ve a marca e devolve null.
   if (retrato.jaAjustado && cfg.pularJaAjustado !== false) {
     return { b64: null, via: 'ja ajustado' };
+  }
+
+  /* A4 RETRATO DE 1 PAGINA: CONFERIR ANTES DE RECORTAR (v16.36.7)
+   *
+   * O QUE ACONTECIA
+   * Duas etiquetas dos Correios de 19/08 sairam recortadas em 10x15 com a etiqueta
+   * PEQUENA no meio do papel — 64 mm e 61 mm de largura numa etiqueta de 100 mm.
+   *
+   * A causa: as duas sao A4 de 1 pagina, o que faz a regra dizer "Shopee". O caminho
+   * rapido entao recorta um retangulo FIXO (0,398)-(300,842) e nunca olha onde a
+   * etiqueta esta de verdade. Como a etiqueta dos Correios ocupava so um pedaco desse
+   * retangulo, o que foi ampliado ate 10x15 foi o retangulo — a etiqueta veio junto,
+   * na proporcao dela, pequena. O recorte "funcionou"; o alvo e que estava errado.
+   *
+   * O CONSERTO
+   * So neste caso — e so quando a regra e um palpite, nunca quando ha prova — a etiqueta
+   * passa pelo motor antes. O motor roda o labeler.js, que le o texto e mede onde a
+   * tinta esta:
+   *   - etiqueta da Shopee de verdade: o labeler tambem detecta Shopee, ve a marca
+   *     "shopee"/"SHP:" no texto e devolve EXATAMENTE o mesmo recorte de hoje;
+   *   - etiqueta dos Correios em A4: o texto entrega ("Contrato" + SEDEX/PAC, codigo
+   *     AA999999999BR) e o recorte passa a ser a tinta, com preenchimento de largura.
+   * Nas duas etiquetas de 19/08 isso leva a largura de 64 mm para 98 mm.
+   *
+   * POR QUE ISTO E SEGURO
+   * O teto e curto (2 s) e a queda e limpa: motor mudo, lento ou ausente devolve null e
+   * seguimos no recorte de hoje, sem piorar nada. E `conferirA4NoMotor` desliga tudo
+   * pelo config remoto, valendo em 1 hora, sem publicar versao. */
+  if (retrato.nome && retrato.palpite && cfg.conferirA4NoMotor !== false &&
+      !msg.semMotor && tabId != null) {
+    const viaMotor = await pedirAoMotor(tabId, msg.base64, operador, TETO_MOTOR_PALPITE_MS);
+    if (viaMotor) return { b64: viaMotor, via: 'motor (A4 conferida)' };
+    self.EnviagoraDiag.registrar('a4-motor-mudo', { detectada: retrato.nome });
   }
 
   if (retrato.nome) {
@@ -574,7 +611,8 @@ chrome.webNavigation.onCompleted.addListener(async (d) => {
   console.log('[Enviagora] pré-aquecendo o motor nesta página.');
 }, { url: [{ urlMatches: '^https?://.*(stokki|enviagora|wms|cockpit|packaging|expedicao|expedição)' }] });
 
-function pedirAoMotor(tabId, base64, operatorName) {
+function pedirAoMotor(tabId, base64, operatorName, tetoMs) {
+  const teto = Number.isFinite(Number(tetoMs)) ? Number(tetoMs) : 8000;
   return new Promise(async (resolve) => {
     const ok = await garantirMotor(tabId);
     if (!ok) return resolve(null);
@@ -583,9 +621,9 @@ function pedirAoMotor(tabId, base64, operatorName) {
     const prazo = setTimeout(() => {
       if (pronto) return;
       pronto = true;
-      self.EnviagoraDiag.registrar('motor-timeout', { ms: 8000 });
+      self.EnviagoraDiag.registrar('motor-timeout', { ms: teto });
       resolve(null);
-    }, 8000);
+    }, teto);
     try {
       chrome.tabs.sendMessage(tabId, { action: 'motorProcessar', base64, operatorName },
         { frameId: 0 }, (resp) => {
@@ -629,7 +667,12 @@ function detectLabel(page, pageCount) {
   const a4Retrato  = width > 550 && width < 640 && height > 800;
   const a4Paisagem = width > 800 && height > 550 && height < 640;
   if (a4Retrato && pageCount > 1)   return { name: 'Amazon',        left: 0, bottom: 0,   width: 300, height: 430 };
-  if (a4Retrato && pageCount === 1) return { name: 'Shopee',        left: 0, bottom: 398, width: 300, height: 444 };
+  // 'palpite' marca a UNICA regra desta lista que nao tem prova nenhuma por tras.
+  // "A4 retrato de 1 pagina" descreve etiqueta da Shopee — e descreve tambem etiqueta
+  // dos Correios impressa em folha A4, que e comum. As outras regras se apoiam em algo:
+  // o detector geometrico achou um retangulo 4x6, a Amazon tem mais de uma pagina, o
+  // Mercado Livre e paisagem. Esta aqui e so "sobrou A4". Ver calcular().
+  if (a4Retrato && pageCount === 1) return { name: 'Shopee',        left: 0, bottom: 398, width: 300, height: 444, palpite: true };
   if (a4Paisagem)                   return { name: 'Mercado Livre', left: 0, bottom: 154, width: 300, height: 410 };
   return null;
 }
@@ -694,7 +737,7 @@ function agora() {
 // nada: "motor" e a ROTA de quem sobrou, nao um veredito de transportadora. Registrando
 // aqui o tamanho e o que a deteccao respondeu, o log passa a dizer o que de fato houve.
 async function ehEtiquetaConhecida(base64) {
-  const vazio = { nome: null, paginas: 0, mm: '?', jaAjustado: false };
+  const vazio = { nome: null, palpite: false, paginas: 0, mm: '?', jaAjustado: false };
   try {
     const bin = atob(base64);
     const bytes = new Uint8Array(bin.length);
@@ -715,6 +758,7 @@ async function ehEtiquetaConhecida(base64) {
     } catch (e) {}
     return {
       nome: det ? det.name : null,
+      palpite: Boolean(det && det.palpite),
       paginas: pages.length,
       mm: mm(width) + 'x' + mm(height),
       jaAjustado
