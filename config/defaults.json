@@ -37,6 +37,9 @@
     "afterprintSintetico": true,
     "bloquearPrintDaTela": true,
 
+    "_conferirA4NoMotor": "FREIO DA v16.36.7. 'A4 retrato de 1 pagina' e a unica regra de deteccao sem prova por tras: descreve etiqueta da Shopee e descreve tambem etiqueta dos Correios impressa em folha A4. Ligado, esse palpite passa pelo motor antes de virar recorte, e foi o que fez duas etiquetas dos Correios sairem com 98 mm em vez de 64 mm e 61 mm. O custo e ate 2 s a mais SO nas etiquetas A4; motor mudo ou lento cai no recorte antigo sozinho, registrando a4-motor-mudo no diagnostico. Se alguma etiqueta da SHOPEE sair diferente do que saia antes, ou se as A4 ficarem lentas, ponha false e suba a configVersion: volta exatamente o comportamento da v16.36.6.",
+    "conferirA4NoMotor": true,
+
     "_bloquearEcoDePrint": "Ignora um segundo print() que chega em menos de 1,5 s do anterior SEM ajuste proprio. O diagnostico de producao mostrou esse eco chegando 15 ms depois e caindo em cima do preview recem-aberto - e assim que aparece o 'Falha ao imprimir'. Se alguma etiqueta legitima parar de sair, ponha false e suba a configVersion.",
     "bloquearEcoDePrint": true,
 
