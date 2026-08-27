@@ -100,6 +100,19 @@ derrubado por um sinal mais específico.* Ele importa no nível seguinte.
 
 ## Nível 2 — texto e tinta: o caminho dos Correios
 
+> **Desligado por padrão desde a v16.36.8.** Este nível é o mais caro do projeto — 0,4 a
+> 1 segundo por etiqueta — e o custo cai sobre **toda** etiqueta que chega ao motor, não
+> só sobre as dos Correios: para saber *se* uma etiqueta é dos Correios, é preciso
+> renderizá-la e varrê-la primeiro. A operação passou a resolver os Correios por fora e
+> esse tempo deixou de se pagar.
+>
+> O recurso continua inteiro na extensão. Liga no **item 5 do popup**, máquina a máquina
+> (o ajuste do operador ganha do padrão da empresa), ou em todas de uma vez pelo
+> `correiosFit` no config remoto. Enquanto estiver desligado, a etiqueta dos Correios em
+> folha A4 volta a cair no palpite "Shopee" — o defeito descrito no Nível 3.
+>
+> O resto desta seção descreve o que acontece **quando ele está ligado**.
+
 Está em `labeler.js`, e só roda no motor (precisa de `pdf.js` e de um canvas). Tem duas
 perguntas independentes.
 
@@ -187,11 +200,13 @@ PDF chega
    │
    ├─ NÍVEL 3: o tamanho da folha bate com alguma regra?
    │      Amazon / Mercado Livre  ──▶ recorte fixo             [regra estável]
-   │      Shopee (A4, 1 página)   ──▶ PALPITE — confere no motor antes
-   │                                     └─ motor lê o texto e a tinta:
-   │                                          é Correios? recorta a tinta   [PROVA]
-   │                                          é Shopee?   mantém o fixo
-   │                                          mudo/lento? mantém o fixo
+   │      Shopee (A4, 1 página)   ──▶ PALPITE
+   │            │
+   │            ├─ Correios DESLIGADO (padrão) ──▶ recorte fixo, sem ida ao motor
+   │            └─ Correios LIGADO ──▶ confere no motor antes:
+   │                                     é Correios? recorta a tinta   [PROVA]
+   │                                     é Shopee?   mantém o fixo
+   │                                     mudo/lento? mantém o fixo
    │
    └─ nada bateu ──▶ motor: recorte pela tinta                 [PROVA]
                        └─ motor indisponível ──▶ ajuste padrão, sem recorte
@@ -249,7 +264,7 @@ já ajustada que voltasse ao início seria recortada de novo — recorte sobre r
 
 | Sintoma | Causa | Onde mexer |
 |---|---|---|
-| Etiqueta **pequena** dentro do papel | recorte com alvo errado: um retângulo fixo maior do que a etiqueta | é o defeito de 19/08 — `conferirA4NoMotor` |
+| Etiqueta **pequena** dentro do papel | recorte com alvo errado: um retângulo fixo maior do que a etiqueta | ligar `correiosFit` (item 5 do popup) |
 | Etiqueta com **borda branca** e o leitor não bipa | margem grande demais no caminho dos Correios | `correiosMarginMm` (teto de 3 mm) |
 | Etiqueta **cortada** | a caixa de tinta pegou menos do que devia, ou a escala encolheu | `correiosPadMm`, `printScaling` |
 
