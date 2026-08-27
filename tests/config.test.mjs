@@ -52,9 +52,13 @@ const PADRAO_v16_33 = {
 
 test('os padroes unificados batem campo a campo com a v16.33', () => {
   for (const [campo, valor] of Object.entries(PADRAO_v16_33)) {
+    // Trocar um padrao de proposito e permitido; trocar sem registrar, nao. Quem esta em
+    // MUDARAM_DEPOIS ja tem versao e motivo escritos, e e conferido pelo teste seguinte.
+    if (campo in MUDARAM_DEPOIS) continue;
     assert.equal(CFG.PADRAO[campo], valor,
       campo + ' mudou de valor na unificacao — era ' + JSON.stringify(valor) +
-      ', virou ' + JSON.stringify(CFG.PADRAO[campo]));
+      ', virou ' + JSON.stringify(CFG.PADRAO[campo]) +
+      '. Se foi de proposito, declare em MUDARAM_DEPOIS com a versao e o motivo.');
   }
 });
 
@@ -90,6 +94,26 @@ const NOVOS_DEPOIS_DA_v16_33 = {
   // dele: 64 mm e 61 mm de largura numa etiqueta de 100 mm.
   conferirA4NoMotor: true
 };
+
+/* Campos que EXISTIAM na v16.33 e cujo PADRAO mudou depois. Ficam separados dos campos
+   novos porque o risco e outro: campo novo ninguem sentia falta; padrao trocado muda o
+   comportamento de 60 maquinas de uma vez. Cada linha precisa de versao e motivo. */
+const MUDARAM_DEPOIS = {
+  // v16.36.8 — desligado a pedido da operacao. Ligado, TODA etiqueta que chega ao motor
+  // paga a renderizacao da pagina e a varredura de pixels (0,4 a 1 s no diagnostico de
+  // producao), e nao so as dos Correios. A operacao passou a resolver os Correios por
+  // fora e esse tempo deixou de se pagar. O recurso continua inteiro: liga no item 5 do
+  // popup, maquina a maquina, ou no config remoto para todas.
+  correiosFit: false
+};
+
+test('os padroes trocados depois da v16.33 estao declarados', () => {
+  for (const [campo, valor] of Object.entries(MUDARAM_DEPOIS)) {
+    assert.equal(CFG.PADRAO[campo], valor,
+      campo + ' deveria ser ' + JSON.stringify(valor) + ' e e ' + JSON.stringify(CFG.PADRAO[campo]) +
+      '. Se a mudanca e de proposito, atualize MUDARAM_DEPOIS com a versao e o motivo.');
+  }
+});
 
 test('nao sobrou nenhum campo a mais nem a menos', () => {
   const atuais = Object.keys(CFG.PADRAO).filter((k) => k !== 'settingsSchemaVersion').sort();

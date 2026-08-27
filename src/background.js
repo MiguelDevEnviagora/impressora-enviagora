@@ -424,8 +424,15 @@ async function calcular(msg, operador, tabId, cfg) {
    * POR QUE ISTO E SEGURO
    * O teto e curto (2 s) e a queda e limpa: motor mudo, lento ou ausente devolve null e
    * seguimos no recorte de hoje, sem piorar nada. E `conferirA4NoMotor` desliga tudo
-   * pelo config remoto, valendo em 1 hora, sem publicar versao. */
-  if (retrato.nome && retrato.palpite && cfg.conferirA4NoMotor !== false &&
+   * pelo config remoto, valendo em 1 hora, sem publicar versao.
+   *
+   * POR QUE ISTO DEPENDE DE correiosFit (v16.36.8)
+   * Esta conferencia existe por UM motivo: pegar etiqueta dos Correios escondida atras
+   * do palpite "Shopee". Com o tratamento dos Correios desligado, nao ha o que pegar —
+   * o motor rodaria, devolveria o MESMO recorte que o caminho rapido devolveria, e a
+   * etiqueta teria pago a ida e volta a toa. Amarrando as duas chaves, o interruptor do
+   * popup passa a ligar e desligar o recurso INTEIRO, e nao metade dele. */
+  if (retrato.nome && retrato.palpite && cfg.correiosFit && cfg.conferirA4NoMotor !== false &&
       !msg.semMotor && tabId != null) {
     const viaMotor = await pedirAoMotor(tabId, msg.base64, operador, TETO_MOTOR_PALPITE_MS);
     if (viaMotor) return { b64: viaMotor, via: 'motor (A4 conferida)' };

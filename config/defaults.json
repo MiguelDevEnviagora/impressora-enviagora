@@ -3,7 +3,7 @@
   "_como_mexer": "1) edite o valor; 2) suba configVersion em 1; 3) commit na main. O GitHub Actions valida as faixas e publica no Pages. Valor fora da faixa NAO derruba o arquivo inteiro: aquele campo e recusado e a maquina segue com o padrao embutido, com o motivo aparecendo no item 9 do popup.",
   "_faixas": "As faixas validas estao em src/config-padrao.js (ESQUEMA) e sao testadas em tests/config.test.mjs. Campo que nao existe no ESQUEMA e ignorado.",
 
-  "configVersion": 2,
+  "configVersion": 3,
   "minSchemaVersion": 1634,
 
   "_killSwitch": "FREIO DE EMERGENCIA. Ligue (true) quando um ajuste quebrar a operacao: a extensao para de interceptar e o PDF original imprime como antes dela existir. As maquinas pegam em ate 1 hora, ou na hora se o operador abrir o popup e clicar em 'Buscar configuracao agora'. A tarja ambar no topo do WMS avisa que a pausa e central, para ninguem sair mexendo na maquina.",
@@ -19,7 +19,9 @@
     "offsetYMm": 0,
 
     "_correios": "ZONA DE RISCO. correiosMarginMm tem teto de 3 mm de proposito: acima disso a etiqueta ganha borda branca lateral e o leitor dos Correios nao bipa. Foi o bug da v16.32. printSafeMarginMm NUNCA e aplicado ao caminho dos Correios, entao mexer nele nao alcanca essa etiqueta.",
-    "correiosFit": true,
+
+    "_correiosFit": "DESLIGADO NA configVersion 3, a pedido da operacao. Ligado, TODA etiqueta que chega ao motor paga a renderizacao da pagina e a varredura de pixel a pixel que procura onde esta a tinta — 0,4 a 1 s por etiqueta no diagnostico de producao, e nao so nas dos Correios. A operacao passou a resolver a etiqueta dos Correios por fora e esse tempo deixou de se pagar. O RECURSO CONTINUA INTEIRO na extensao: quem precisar liga no item 5 do popup, so naquela maquina, e o ajuste do operador ganha deste arquivo. Para religar em todas, ponha true aqui e suba a configVersion — vale em ate 1 hora, sem publicar versao. O QUE SE PERDE DESLIGADO: etiqueta dos Correios em folha A4 volta a cair no palpite 'Shopee' e sai pequena dentro do papel (o defeito de 19/08); etiqueta que ja vem em 100x150 continua saindo, so que sem a ampliacao.",
+    "correiosFit": false,
     "correiosScope": "correios",
     "correiosPadMm": 0.5,
     "correiosMarginMm": 1,

@@ -95,7 +95,27 @@
     operatorNameFontSize: 9,
     batchMode: false,
     // extras (dependem do motor)
-    correiosFit: true,
+    /* DESLIGADO POR PADRAO desde a v16.36.8, a pedido da operacao.
+     *
+     * O QUE ESTE CAMPO LIGA
+     * O tratamento dos Correios inteiro: ler o texto da pagina, RENDERIZAR a pagina e
+     * varrer pixel a pixel para achar onde a tinta esta, e recortar por ali. E o unico
+     * caminho que mede a etiqueta em vez de assumir onde ela fica — e tambem o mais caro
+     * do projeto: 400 a 1000 ms por etiqueta no diagnostico de producao, pagos por
+     * TODA etiqueta que chega ao motor, e nao so pelas dos Correios.
+     *
+     * POR QUE DESLIGADO
+     * A operacao passou a resolver a etiqueta dos Correios por fora, e esse tempo deixou
+     * de se pagar. Desligado, o recurso continua inteiro na extensao: quem precisar liga
+     * no item 5 do popup, so naquela maquina, e o ajuste do operador ganha do padrao da
+     * empresa. Ligar de volta em todas e mudar uma linha no config remoto — 1 hora, sem
+     * publicar versao.
+     *
+     * O QUE SE PERDE ENQUANTO ESTIVER DESLIGADO
+     * Etiqueta dos Correios em folha A4 volta a cair no palpite "Shopee" e sai pequena
+     * dentro do papel — e o defeito de 19/08, descrito em docs/LOGICA-DO-MOTOR.md.
+     * Etiqueta que ja vem em 100x150 continua saindo, so que sem a ampliacao. */
+    correiosFit: false,
     correiosScope: 'correios',
     correiosPadMm: 0.5,
     correiosMarginMm: 1,

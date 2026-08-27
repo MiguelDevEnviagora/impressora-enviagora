@@ -71,13 +71,61 @@ test('a regra do A4 vem MARCADA como palpite, e as outras nao', () => {
 
 test('o palpite passa pelo motor antes de virar recorte, com teto curto e queda limpa', () => {
   const src = lerSrc('background.js');
-  assert.match(src, /retrato\.palpite && cfg\.conferirA4NoMotor !== false/,
-    'o palpite voltou a virar recorte direto, sem conferencia');
+  /* v16.36.8: a conferencia passou a exigir tambem correiosFit. Ela existe por UM
+     motivo — pegar etiqueta dos Correios escondida atras do palpite "Shopee". Com o
+     tratamento dos Correios desligado nao ha o que pegar, e o motor devolveria o MESMO
+     recorte do caminho rapido: ida e volta paga a toa. Amarrar as duas chaves faz o
+     interruptor do popup ligar e desligar o recurso INTEIRO, e nao metade dele. */
+  assert.match(src, /retrato\.palpite && cfg\.correiosFit && cfg\.conferirA4NoMotor !== false/,
+    'o palpite voltou a virar recorte direto, ou a conferencia se soltou do correiosFit');
   assert.match(src, /TETO_MOTOR_PALPITE_MS = 2000/,
     'o teto da conferencia sumiu ou mudou — sem teto curto, motor lento vira etiqueta atrasada');
   // a queda tem que ser para o recorte de hoje, e nao para "sem ajuste"
-  const trecho = src.slice(src.indexOf('retrato.palpite && cfg.conferirA4NoMotor'));
+  const trecho = src.slice(src.indexOf('retrato.palpite && cfg.correiosFit'));
   const depois = trecho.slice(0, trecho.indexOf('// Nenhuma regra bateu'));
   assert.match(depois, /processarBasico\(msg\.base64, operador\)/,
     'motor mudo tem que cair no recorte de hoje — nunca em "sem ajuste"');
+});
+
+/* O INTERRUPTOR DO POPUP, EXERCITADO NO BACKGROUND DE VERDADE.
+ *
+ * A partir da v16.36.8 o tratamento dos Correios nasce DESLIGADO e quem precisa liga no
+ * item 5 do popup. O popup grava o ajuste no storage de sincronizacao, que ganha do
+ * padrao da empresa. Estes dois testes conferem as duas pontas: desligado nao chama o
+ * motor (que e o tempo que a operacao quis de volta), e ligado chama.
+ *
+ * O sinal observavel e o evento `a4-motor-mudo`: no Node o motor nunca responde, entao
+ * ele so aparece se a conferencia chegou a ser TENTADA. */
+import { carregarBackgroundReal, mandar } from './ajuda/chrome-falso.mjs';
+
+const chromeBg = carregarBackgroundReal();
+const respirar = () => new Promise((r) => setTimeout(r, 80));
+
+async function imprimirA4(sync) {
+  Object.keys(chromeBg._sync).forEach((k) => delete chromeBg._sync[k]);
+  Object.assign(chromeBg._sync, sync);
+  delete chromeBg._local.diagnostico;
+
+  const doc = await globalThis.PDFLib.PDFDocument.create();
+  const pag = doc.addPage([595.28, 841.89]);            // A4 retrato, 1 pagina -> palpite "Shopee"
+  pag.drawText('CONTRATO 9912733639 PAC ' + JSON.stringify(sync), { x: 40, y: 800, size: 12 });
+  const base64 = Buffer.from(await doc.save()).toString('base64');
+
+  await mandar(chromeBg, { action: 'cropPdf', base64 }, { tab: { id: 7 } });
+  await respirar();
+  return (chromeBg._local.diagnostico || []).map((e) => e.tipo);
+}
+
+test('desligado (padrao da empresa): a etiqueta A4 nao paga a ida ao motor', async () => {
+  const eventos = await imprimirA4({});
+  assert.ok(!eventos.includes('a4-motor-mudo'),
+    'a conferencia foi tentada mesmo com o tratamento dos Correios desligado — ' +
+    'e exatamente o tempo por etiqueta que a operacao pediu de volta');
+});
+
+test('ligado no popup daquela maquina: a conferencia volta a acontecer', async () => {
+  // E o que o popup grava quando o operador marca o item 5.
+  const eventos = await imprimirA4({ correiosFit: true });
+  assert.ok(eventos.includes('a4-motor-mudo'),
+    'o interruptor do popup nao religou a conferencia — ligar viraria meia funcionalidade');
 });
