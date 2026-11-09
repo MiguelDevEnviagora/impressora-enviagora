@@ -1,0 +1,207 @@
+/* Enviagora — Menu da Operação (cópia do estilo.css da extensão Menu da Operação; usado só pela tela de edição)
+ * Tokens da marca "Autoridade Técnica" (skill branding-enviagora, reference/design-system.md).
+ * Satoshi embutida (funciona offline). Tema claro e escuro.
+ */
+@font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-500.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-700.woff2') format('woff2'); font-weight: 600 700; font-display: swap; }
+
+:root {
+  /* institucional */
+  --ea-verde-profundo: #123336;
+  --ea-verde-neon: #c4ff57;
+  --ea-neon-300: #d6ff8f;
+  --ea-creme: #fafaf5;
+
+  /* produto: tema claro */
+  --ui-bg: #f4f6f4;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f0f3f1;
+  --ui-border: #e6eae7;
+  --ui-border-strong: #dee3e0;
+  --ui-text: #123336;
+  --ui-text-muted: #5a7376;
+  --ui-text-faint: #8aa0a2;
+  --ui-focus: #3e7478;
+
+  --ui-danger: #b91c1c;
+  --ui-danger-soft: #fef2f2;
+  --ui-warning: #b45309;
+  --ui-warning-soft: #fffbeb;
+  --ui-success: #047857;
+  --ui-success-soft: #ecfdf5;
+
+  --ui-radius-card: 16px;
+  --ui-radius-control: 10px;
+  --ui-radius-pill: 999px;
+
+  --fonte: 'Satoshi', 'Inter', -apple-system, 'Segoe UI', Arial, sans-serif;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ui-bg: #0b1f21;
+    --ui-surface: #123336;
+    --ui-surface-2: #1b4448;
+    --ui-border: #1b4448;
+    --ui-border-strong: #2a5b5f;
+    --ui-text: #fafaf5;
+    --ui-text-muted: #9bbbbc;
+    --ui-text-faint: #6a9698;
+    --ui-focus: #c4ff57;
+    --ui-danger: #fca5a5;
+    --ui-danger-soft: rgba(239, 68, 68, 0.15);
+    --ui-warning: #fcd34d;
+    --ui-warning-soft: rgba(245, 158, 11, 0.15);
+    --ui-success: #6ee7b7;
+    --ui-success-soft: rgba(16, 185, 129, 0.15);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--fonte);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+.oculto { display: none !important; }
+
+/* ------------------------------ topo (sempre escuro) ------------------------------ */
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 56px;
+  padding: 0 20px;
+  background: var(--ea-verde-profundo);
+  color: var(--ea-creme);
+}
+.topo img { height: 20px; width: auto; display: block; }
+.topo-rotulo,
+.eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+.topo-rotulo { color: #9bbbbc; text-align: right; }
+.eyebrow { color: var(--ui-text-muted); }
+
+.micro { font-size: 11px; font-weight: 500; color: var(--ui-text-muted); margin: 0; }
+
+/* ------------------------------ controles ------------------------------ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--ui-radius-control);
+  border: 1px solid transparent;
+  font: 600 12px/1 var(--fonte);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-mini { height: 32px; padding: 0 12px; }
+
+/* ação primária: neon com texto verde profundo, caixa alta (o único acento da tela) */
+.btn-primario {
+  background: var(--ea-verde-neon);
+  color: var(--ea-verde-profundo);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+.btn-primario:hover:not(:disabled) { background: var(--ea-neon-300); }
+
+/* secundária: ghost */
+.btn-secundario {
+  background: transparent;
+  color: var(--ui-text);
+  border-color: var(--ui-border-strong);
+}
+.btn-secundario:hover:not(:disabled) { background: var(--ui-surface-2); }
+
+/* destrutiva: texto danger sobre danger-soft */
+.btn-perigo { background: var(--ui-danger-soft); color: var(--ui-danger); }
+.btn-perigo:hover:not(:disabled) { border-color: var(--ui-danger); }
+
+.largura-total { width: 100%; }
+
+input[type='text'],
+input[type='email'],
+input[type='search'] {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--ui-radius-control);
+  border: 1px solid var(--ui-border-strong);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  font: 400 13px var(--fonte);
+  transition: border-color 150ms ease;
+}
+input::placeholder { color: var(--ui-text-faint); }
+input:focus { border-color: var(--ui-focus); outline: none; box-shadow: 0 0 0 1px var(--ui-focus); }
+
+.campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.campo > span { font-size: 12px; font-weight: 600; color: var(--ui-text-muted); }
+
+/* ------------------------------ avisos e badges ------------------------------ */
+.aviso { margin: 0; padding: 12px 16px; border-radius: var(--ui-radius-control); font-size: 13px; font-weight: 500; }
+.aviso-erro { background: var(--ui-danger-soft); color: var(--ui-danger); }
+.aviso-alerta { background: var(--ui-warning-soft); color: var(--ui-warning); }
+.aviso-ok { background: var(--ui-success-soft); color: var(--ui-success); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--ui-radius-pill);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.badge-pendente { background: var(--ui-warning-soft); color: var(--ui-warning); }
+
+/* tile do sistema: logo real ou sigla */
+.sigla {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ui-text);
+  overflow: hidden;
+}
+.sigla img { width: 24px; height: 24px; object-fit: contain; display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* Seta da Enviagora (BI): verde profundo no tema claro; neon no escuro, onde o verde some. */
+@media (prefers-color-scheme: dark) {
+  .sigla img[src$="/menu/logos/cockpit.svg"] { content: url('logos/cockpit-escuro.svg'); }
+}

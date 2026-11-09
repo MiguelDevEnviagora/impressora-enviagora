@@ -283,6 +283,7 @@ Permissão a mais é o que mais reprova extensão na revisão da Web Store, que 
 | `scripting` | injetar o motor (canvas/pdf.js) no frame do WMS — o único jeito de ter canvas ignorando a CSP do site |
 | `webNavigation` | detectar o PDF em blob e o PDF em aba própria no momento certo |
 | `tabs` | trocar a aba pelo `viewer.html` e falar com o motor por `tabs.sendMessage` |
+| `identity` | login Google do "Editar menu" (aba Menu, `docs/PAINEL.md`). **Não gera aviso de permissão**: conferido com `chrome.management.getPermissionWarningsByManifest` e no código do Chromium (só `identity.email` tem aviso) |
 | `<all_urls>` | o WMS e os PDFs de etiqueta não têm domínio fixo |
 | `file://*/*` | operadores abrem etiquetas salvas no disco |
 

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="estilo.css" />
+    <link rel="stylesheet" href="admin.css" />
+    <title>Menu da Operação — Administração</title>
+  </head>
+  <body>
+    <header class="topo">
+      <img src="assets/enviagora-logo-horizontal-neon-creme.svg" alt="Enviagora" />
+      <span class="topo-rotulo">ADMINISTRAÇÃO DO MENU</span>
+    </header>
+
+    <!-- ------------------------- ENTRAR ------------------------- -->
+    <section id="telaEntrar" class="tela-senha">
+      <div class="cartao cartao-senha">
+        <span class="eyebrow">Área restrita</span>
+        <h1 class="titulo-pagina">Editar o menu da operação</h1>
+        <p class="micro">Entre com a sua conta Google da Enviagora para editar o menu de todas as máquinas.</p>
+        <button type="button" class="btn btn-primario largura-total" id="btnEntrar">Entrar com Google</button>
+        <p id="entrarAviso" class="aviso aviso-erro oculto"></p>
+      </div>
+    </section>
+
+    <!-- --------------------------- EDITOR ----------------------------- -->
+    <section id="telaEditor" class="tela-editor oculto">
+      <div class="barra-acoes">
+        <div>
+          <h1 class="titulo-pagina">Editar menu da operação</h1>
+          <p class="micro" id="editorInfo"></p>
+        </div>
+        <div class="grupo-botoes">
+          <button type="button" class="btn btn-secundario" id="btnSair">Sair</button>
+          <button type="button" class="btn btn-primario" id="btnPublicar">Publicar para todas as máquinas</button>
+        </div>
+      </div>
+
+      <p id="editorAviso" class="aviso oculto"></p>
+
+      <div class="cartao">
+        <label class="campo" style="max-width: 360px">
+          <span>Nome exibido no topo do menu</span>
+          <input type="text" id="tituloMenu" maxlength="60" />
+        </label>
+      </div>
+
+      <div id="grupos"></div>
+
+      <button type="button" class="btn btn-secundario" id="btnAddGrupo">Adicionar grupo</button>
+
+      <div class="colunas">
+        <div class="cartao">
+          <h2 class="titulo-secao">Administradores</h2>
+          <p class="micro">Quem está nesta lista pode editar e publicar o menu. Só contas @enviagora.com.br.</p>
+          <ul id="admins" class="historico"></ul>
+          <div class="linha-fabrica">
+            <label class="campo">
+              <span>E-mail</span>
+              <input type="email" id="novoAdmin" placeholder="nome@enviagora.com.br" />
+            </label>
+            <button type="button" class="btn btn-secundario btn-mini" id="btnAddAdmin">Adicionar</button>
+          </div>
+          <p id="adminAviso" class="aviso oculto"></p>
+        </div>
+
+        <div class="cartao">
+          <h2 class="titulo-secao">Máquinas</h2>
+          <p class="micro">Instalações que abriram o Chrome. Cada uma tem um código aleatório, sem nome nem usuário.</p>
+          <ul id="maquinas" class="historico"></ul>
+        </div>
+
+        <div class="cartao">
+          <h2 class="titulo-secao">Últimas alterações</h2>
+          <ul id="historico" class="historico"></ul>
+        </div>
+      </div>
+    </section>
+
+    <script type="module" src="admin.js"></script>
+  </body>
+</html>

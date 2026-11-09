@@ -40,7 +40,7 @@ for (const p of ['storage', 'alarms', 'scripting', 'webNavigation', 'tabs']) {
   if (!manifest.permissions?.includes(p)) falha('falta a permissao "' + p + '" no manifest');
 }
 // Permissao a mais e o que mais reprova extensao na revisao da Web Store, que e o plano B.
-const PERMISSOES_JUSTIFICADAS = ['storage', 'alarms', 'scripting', 'webNavigation', 'tabs'];
+const PERMISSOES_JUSTIFICADAS = ['storage', 'alarms', 'scripting', 'webNavigation', 'tabs', 'identity'];
 for (const p of manifest.permissions || []) {
   if (!PERMISSOES_JUSTIFICADAS.includes(p)) {
     falha('permissao "' + p + '" nao esta justificada em docs/ARQUITETURA.md — ' +
