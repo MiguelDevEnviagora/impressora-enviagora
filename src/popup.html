@@ -84,10 +84,31 @@
     }
     .alerta-off.on { display: block; }
   </style>
+  <link rel="stylesheet" href="menu/menu.css" />
 </head>
 <body>
   <h1>IMPRESSORA ENVIAGORA</h1>
   <div class="sub">v16.33 — Configurações de impressão 10×15</div>
+
+  <!-- ── Abas: Menu da operação (abre por padrão) | Impressão (o painel de sempre) ── -->
+  <div class="abas" role="tablist">
+    <button type="button" id="btnAbaMenu" role="tab" aria-selected="true">Menu da operação</button>
+    <button type="button" id="btnAbaImpressao" role="tab" aria-selected="false">Impressão</button>
+  </div>
+
+  <section id="abaMenu">
+    <div class="menu-topo">
+      <img src="menu/assets/enviagora-logo-horizontal-neon-verde.svg" alt="Enviagora" />
+      <span>MENU DA<br>OPERAÇÃO</span>
+    </div>
+    <div class="menu-corpo">
+      <input id="menuBusca" type="search" placeholder="Buscar sistema pelo nome" aria-label="Buscar sistema" autocomplete="off" spellcheck="false" />
+      <div id="menuGrupos"></div>
+      <div class="menu-pe"><span id="menuRodape" class="menu-rodape"></span></div>
+    </div>
+  </section>
+
+  <section id="abaImpressao" hidden>
 
   <!-- ── Ativar / Desativar extensão ── -->
   <div class="enable-row">
@@ -263,8 +284,11 @@
   <button id="save">Salvar configurações</button>
   <div id="status" class="status"></div>
 
+  </section>
+
   <script src="config-padrao.js"></script>
   <script src="diagnostico.js"></script>
   <script src="popup.js"></script>
+  <script type="module" src="menu/menu.js"></script>
 </body>
 </html>
