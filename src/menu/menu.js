@@ -58,6 +58,10 @@ function aba(qual) {
 $('btnAbaMenu').addEventListener('click', () => aba('menu'));
 $('btnAbaImpressao').addEventListener('click', () => aba('impressao'));
 
+// Edição numa aba: login Google e lista de admins. Quem não é admin entra e recebe "sem permissão":
+// quem barra são as regras do Firestore, no servidor, não este botão.
+$('menuEditar').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('menu/admin.html') }));
+
 $('menuBusca').addEventListener('input', (e) => render(e.target.value));
 $('menuBusca').addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {

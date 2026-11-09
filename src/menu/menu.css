@@ -40,7 +40,10 @@ a.menu-item::after { content: '›'; margin-left: auto; color: var(--ea-fraco); 
 .menu-badge { margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #b45309;
   background: #fffbeb; border-radius: 999px; padding: 3px 8px; }
 .menu-vazio { font-size: 12px; color: var(--ea-mudo); padding: 4px 2px 12px; }
-.menu-pe { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.menu-pe { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.menu-editar { width: auto; flex: none; margin: 0; background: transparent; border: 1px solid var(--ea-borda-forte); border-radius: 10px; padding: 6px 10px; cursor: pointer;
+  font: 700 11px 'Satoshi', Arial, sans-serif; color: var(--ea-texto); }
+.menu-editar:hover { background: var(--ea-sup2); }
 .menu-rodape { font-size: 11px; color: var(--ea-fraco); }
 
 /* Fonte da marca no popup inteiro (cabeçalho e aba Impressão). Só a fonte: cores e layout da aba
