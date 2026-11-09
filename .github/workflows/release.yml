@@ -87,6 +87,9 @@ jobs:
           # que pulou a assinatura — que e o certo para o ci.yml, mas seria desastre aqui:
           # um Release sem CRX nao atualiza maquina nenhuma e nao daria erro visivel.
           EXIGIR_CRX: '1'
+          # Identificadores publicos do menu da operacao (login do "Editar menu"). Ver scripts/build.mjs.
+          MENU_API_KEY: ${{ vars.MENU_API_KEY }}
+          MENU_OAUTH_CLIENT_ID: ${{ vars.MENU_OAUTH_CLIENT_ID }}
         run: node scripts/build.mjs
 
       - name: Conferir que os tres artefatos existem
