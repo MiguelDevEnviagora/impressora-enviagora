@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "IMPRESSORA ENVIAGORA",
+  "name": "Painel de Operação",
   "version": "16.36.8",
-  "description": "Impressora Enviagora: ajusta e imprime etiquetas (Amazon, Shopee, Mercado Livre, Correios). v16.36.8: o tratamento dos Correios passa a nascer desligado e liga no item 5 do popup, maquina a maquina.",
+  "description": "Painel de Operação da Enviagora: menu com os sistemas da operação e impressão de etiquetas 10x15 (Amazon, Shopee, Mercado Livre, Correios).",
   "permissions": [
     "tabs",
     "scripting",
@@ -69,7 +69,7 @@
     "128": "icones/icone-128.png"
   },
   "action": {
-    "default_title": "IMPRESSORA ENVIAGORA",
+    "default_title": "Painel de Operação",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icones/icone-16.png",
