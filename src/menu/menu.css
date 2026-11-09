@@ -42,3 +42,7 @@ a.menu-item::after { content: '›'; margin-left: auto; color: var(--ea-fraco); 
 .menu-vazio { font-size: 12px; color: var(--ea-mudo); padding: 4px 2px 12px; }
 .menu-pe { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .menu-rodape { font-size: 11px; color: var(--ea-fraco); }
+
+/* Fonte da marca no popup inteiro (cabeçalho e aba Impressão). Só a fonte: cores e layout da aba
+ * Impressão continuam os dela. Arial fica de reserva se a Satoshi não carregar. */
+:root, body, h1, input, select, button, textarea, label { font-family: 'Satoshi', Arial, Helvetica, sans-serif; }
