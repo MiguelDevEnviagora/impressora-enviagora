@@ -82,6 +82,25 @@ delete manifestLoja.update_url;
 
 // ── 3. ZIPs ─────────────────────────────────────────────────────────────────
 const arquivos = arquivosDaExtensao();
+
+// Menu da operação (src/menu/config.js): a API key do Firebase e o client_id do OAuth do projeto
+// menu-enviagora sao identificadores PUBLICOS, mas ficam fora do git para nao parecerem segredo
+// vazado num repo publico. Vem das variaveis do repo (Settings -> Variables -> Actions). Sem elas o
+// menu abre normal (leitura publica); so o "Editar menu" nao consegue entrar. No release (EXIGIR_CRX)
+// a falta delas aborta, para nao publicar uma versao em que o PCP nao consegue editar.
+const menuIds = { __API_KEY__: process.env.MENU_API_KEY, __OAUTH_CLIENT_ID__: process.env.MENU_OAUTH_CLIENT_ID };
+const faltaMenu = Object.entries(menuIds).filter(([, v]) => !v).map(([k]) => k === '__API_KEY__' ? 'MENU_API_KEY' : 'MENU_OAUTH_CLIENT_ID');
+if (faltaMenu.length && process.env.EXIGIR_CRX) {
+  console.error(cor.erro('\n  Faltam ' + faltaMenu.join(' e ') + ' (variaveis do repo). Sem elas o "Editar menu" nao entra. Build abortado.\n'));
+  process.exit(1);
+}
+if (faltaMenu.length) console.log('  ' + cor.aviso('menu') + ' — sem ' + faltaMenu.join(' e ') + ': o "Editar menu" nao vai conseguir entrar neste pacote.');
+for (const a of arquivos) {
+  if (a.nome !== 'menu/config.js') continue;
+  let txt = a.dados.toString('utf8');
+  for (const [marcador, valor] of Object.entries(menuIds)) if (valor) txt = txt.replace(marcador, valor);
+  a.dados = Buffer.from(txt, 'utf8');
+}
 const semManifest = arquivos.filter((a) => a.nome !== 'manifest.json');
 
 const comManifest = (m) => [
