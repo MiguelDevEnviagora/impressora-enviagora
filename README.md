@@ -6,6 +6,9 @@ reencaixa em **100×150 mm** e manda para a impressora térmica.
 
 Roda em ~60 computadores da operação de fulfillment da Enviagora.
 
+No popup, a extensão se chama **Painel de Operação**: a aba **Menu da operação** traz os atalhos dos
+sistemas (editados pelo PCP, sem versão nova) e a aba **Impressão** é o painel de configuração de sempre.
+
 **Página de instalação:** https://enviagora.github.io/impressora-enviagora/
 
 ---
@@ -14,6 +17,7 @@ Roda em ~60 computadores da operação de fulfillment da Enviagora.
 
 | Você quer | Leia |
 |---|---|
+| Entender ou editar o menu dos sistemas (aba Menu) | [docs/PAINEL.md](docs/PAINEL.md) |
 | Instalar nas máquinas | [docs/ROLLOUT.md](docs/ROLLOUT.md) |
 | Decidir como distribuir | [docs/PILOTO.md](docs/PILOTO.md) — faça isto primeiro |
 | Mexer no código | [docs/ARQUITETURA.md](docs/ARQUITETURA.md) |
