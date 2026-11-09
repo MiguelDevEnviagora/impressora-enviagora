@@ -90,6 +90,9 @@
   <h1>IMPRESSORA ENVIAGORA</h1>
   <div class="sub">v16.33 — Configurações de impressão 10×15</div>
 
+  <!-- Fora das abas: quem está no Menu também precisa ver que a impressão está sem ajuste. -->
+  <div id="avisoOff" class="alerta-off">EXTENSÃO DESLIGADA — as etiquetas estão saindo sem ajuste.</div>
+
   <!-- ── Abas: Menu da operação (abre por padrão) | Impressão (o painel de sempre) ── -->
   <div class="abas" role="tablist">
     <button type="button" id="btnAbaMenu" role="tab" aria-selected="true">Menu da operação</button>
@@ -133,9 +136,6 @@
     </div>
     <div id="senhaErro" class="lock-erro"></div>
   </div>
-
-  <!-- ── Aviso quando está desligada ── -->
-  <div id="avisoOff" class="alerta-off">EXTENSÃO DESLIGADA — as etiquetas estão saindo sem ajuste.</div>
 
   <!-- ── 1. Tamanho ── -->
   <div class="card">
