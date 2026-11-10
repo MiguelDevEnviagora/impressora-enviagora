@@ -640,3 +640,24 @@ test('a chave de deduplicacao nao guarda o PDF inteiro', () => {
   assert.doesNotMatch(fn, /b\.slice\(0, ?64\)/, 'a chave voltou ao pedaco de 64 chars que colide');
   assert.match(fn, /operador/, 'a chave ignora o operador — dois operadores dividiriam a mesma etiqueta');
 });
+
+test('o endereco de atualizacao e um so, fora do nome da organizacao no GitHub', () => {
+  // A v16.36.8 gravou nas maquinas enviagora.github.io; o repo mudou de organizacao, o Pages
+  // nao redireciona e as 60 pararam de atualizar. O endereco gravado agora e o do Firebase
+  // (menu-enviagora.web.app), que redireciona para o Pages. Ele tem que ser o MESMO no
+  // update_url (homepage), na busca do config e no instalar.ps1 - e nunca github.io.
+  const pkg = JSON.parse(fs.readFileSync(path.join(RAIZ, 'package.json'), 'utf8'));
+  const base = pkg.homepage.endsWith('/') ? pkg.homepage : pkg.homepage + '/';
+  assert.doesNotMatch(base, /github\.io/, 'o homepage voltou a depender do nome da organizacao no GitHub');
+
+  assert.ok(lerSrc('config-padrao.js').includes("'" + base + "config/defaults.json'"),
+    'a busca do defaults.json nao usa o mesmo endereco do homepage');
+
+  const ps = fs.readFileSync(path.join(RAIZ, 'scripts', 'instalar.ps1'), 'utf8');
+  assert.ok(ps.includes("$PAGINA      = '" + base + "'"), 'o instalar.ps1 aponta para outra pagina');
+  const repo = pkg.repository.url.match(/github\.com\/([^/]+\/[^/.]+)/)[1];
+  assert.ok(ps.includes("$REPO        = '" + repo + "'"), 'o instalar.ps1 baixa de outro repo');
+  for (const fonte of [new URL(base).origin + '/*', 'https://github.com/*', 'https://release-assets.githubusercontent.com/*']) {
+    assert.ok(ps.includes("'" + fonte + "'"), 'o instalar.ps1 nao libera ' + fonte + ' e a instalacao do CRX falha');
+  }
+});

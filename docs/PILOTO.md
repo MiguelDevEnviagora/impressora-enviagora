@@ -69,7 +69,7 @@ Na máquina A: Botão Iniciar → digite `powershell` → botão direito em **Wi
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/enviagora-dev/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
 & "$env:TEMP\instalar-enviagora.ps1"
 ```
 

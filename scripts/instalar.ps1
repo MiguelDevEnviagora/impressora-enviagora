@@ -25,7 +25,7 @@
 
       Set-ExecutionPolicy -Scope Process Bypass -Force
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-      Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+      Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/enviagora-dev/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
       & "$env:TEMP\instalar-enviagora.ps1"
 
     As duas primeiras linhas nao sao enfeite: sem a primeira o Windows recusa executar o
@@ -62,8 +62,8 @@ $ErrorActionPreference = 'Stop'
 # faz o toggle de file:// sobreviver as atualizacoes. tests/invariantes.test.mjs confere
 # que este valor continua batendo com a chave versionada.
 $ID_EXTENSAO = 'kigacgfagjemjheogplplhcneolndhan'
-$REPO        = 'Enviagora/impressora-enviagora'
-$PAGINA      = 'https://enviagora.github.io/impressora-enviagora/'
+$REPO        = 'enviagora-dev/impressora-enviagora'
+$PAGINA      = 'https://menu-enviagora.web.app/impressora-enviagora/'
 
 # Onde a politica local mora. ExtensionInstallAllowlist libera SO esta extensao - nao
 # abrimos a maquina para extensao de fora da loja em geral; o id e a lista inteira.
@@ -178,11 +178,16 @@ New-Item -Path $chaveFontes -Force | Out-Null
 Set-ItemProperty -Path $chaveAllow -Name '1' -Value $ID_EXTENSAO -Type String
 Escrever "  extensao liberada: $ID_EXTENSAO" 'Green'
 
-# De onde o Chrome aceita receber o CRX. Sao os tres caminhos possiveis: a pagina de
-# download, o Release do GitHub, e o arquivo local (quando alguem arrasta o .crx).
+# De onde o Chrome aceita receber o CRX: o endereco fixo (menu-enviagora.web.app, que
+# redireciona para o Pages), o Pages, o Release do GitHub e os servidores para onde ele
+# redireciona o download, e o arquivo local (quando alguem arrasta o .crx). Os enderecos
+# antigos ficam: liberar a mais nao quebra nada; faltar um faz a instalacao falhar.
 $fontes = @(
+  'https://menu-enviagora.web.app/*',
+  'https://enviagora-dev.github.io/*',
   'https://enviagora.github.io/*',
   'https://github.com/*',
+  'https://release-assets.githubusercontent.com/*',
   'https://objects.githubusercontent.com/*',
   'file:///*'
 )

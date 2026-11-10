@@ -45,7 +45,7 @@ export function urlBase() {
   return url.endsWith('/') ? url : url + '/';
 }
 
-/** "Enviagora/impressora-enviagora" a partir do repository.url do package.json. */
+/** "enviagora-dev/impressora-enviagora" a partir do repository.url do package.json. */
 export function repositorio() {
   const url = pacote().repository?.url || '';
   const m = url.match(/github\.com\/([^/]+\/[^/.]+)/);

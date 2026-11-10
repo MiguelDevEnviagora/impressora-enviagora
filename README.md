@@ -9,7 +9,7 @@ Roda em ~60 computadores da operação de fulfillment da Enviagora.
 No popup, a extensão se chama **Painel de Operação**: a aba **Menu da operação** traz os atalhos dos
 sistemas (editados pelo PCP, sem versão nova) e a aba **Impressão** é o painel de configuração de sempre.
 
-**Página de instalação:** https://enviagora.github.io/impressora-enviagora/
+**Página de instalação:** https://menu-enviagora.web.app/impressora-enviagora/
 
 ---
 
