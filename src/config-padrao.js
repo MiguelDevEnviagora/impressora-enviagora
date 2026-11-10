@@ -23,7 +23,7 @@
 
   // Endereco do config remoto. O Pages e publico por necessidade: o Chrome NAO autentica
   // ao consultar update_url nem ao buscar este arquivo. Ver docs/ARQUITETURA.md.
-  const URL_CONFIG = 'https://enviagora.github.io/impressora-enviagora/config/defaults.json';
+  const URL_CONFIG = 'https://menu-enviagora.web.app/impressora-enviagora/config/defaults.json';
 
   // Versao do formato das configuracoes gravadas na maquina. Sobe quando a forma de
   // guardar muda (nao quando um valor muda). 1634 = storage passou a guardar so o delta.

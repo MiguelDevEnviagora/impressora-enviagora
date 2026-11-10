@@ -20,7 +20,7 @@ com corrigir uma etiqueta errada no meio do turno. Aqui a correção vale em min
 
 ### 1. Deixar o repositório público
 
-`github.com/Enviagora/impressora-enviagora` → **Settings** → desça até **Danger Zone** →
+`github.com/enviagora-dev/impressora-enviagora` → **Settings** → desça até **Danger Zone** →
 **Change repository visibility** → **Make public**.
 
 > **Por que isso é obrigatório.** O Chrome não faz login ao procurar atualização: sem
@@ -71,7 +71,7 @@ git push origin main --tags
 O robô do GitHub faz o resto: testa, assina, publica o Release e sobe a página. Acompanhe
 em **Actions** — quando ficar verde, está no ar.
 
-Confira abrindo: **https://enviagora.github.io/impressora-enviagora/**
+Confira abrindo: **https://menu-enviagora.web.app/impressora-enviagora/**
 
 ### 2. Preparar cada máquina
 
@@ -85,7 +85,7 @@ Em cada uma das 60, uma vez só. **Não precisa de pendrive** — o comando baix
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Enviagora/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/enviagora-dev/impressora-enviagora/main/scripts/instalar.ps1 -OutFile "$env:TEMP\instalar-enviagora.ps1"
 & "$env:TEMP\instalar-enviagora.ps1"
 ```
 

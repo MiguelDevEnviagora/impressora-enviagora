@@ -5,10 +5,10 @@
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
-  "homepage": "https://enviagora.github.io/impressora-enviagora/",
+  "homepage": "https://menu-enviagora.web.app/impressora-enviagora/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Enviagora/impressora-enviagora.git"
+    "url": "git+https://github.com/enviagora-dev/impressora-enviagora.git"
   },
   "engines": {
     "node": ">=18"
