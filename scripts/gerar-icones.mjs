@@ -8,13 +8,13 @@
  * a fonte da verdade e a geometria + os HEX oficiais, e os PNGs sao saida reproduzivel.
  *
  * A MARCA
- * Simbolo EnviAgora: a seta ↗, que e a reducao maxima do logo (a letra "a" do lettering).
- * Regra do manual para fundo escuro: fundo Verde Profundo #16302A + seta Verde Neon
- * #C5FF56. Cantos bem arredondados, como o resto do sistema visual de 2026.
+ * Simbolo oficial EnviAgora (o "a" do lettering), o mesmo da extensao Menu da Operacao
+ * (enviagora-simbolo-neon.svg). Regra do manual para fundo escuro: fundo Verde Profundo
+ * #16302A + simbolo Verde Neon #C5FF56. Cantos bem arredondados, como o resto do sistema
+ * visual de 2026.
  *
- * Sem dependencia: rasteriza por distancia de segmento (a seta e a uniao de 3 capsulas,
- * que e exatamente o que "stroke-linecap/linejoin: round" desenha) e escreve o PNG na
- * mao — cabecalho, IDAT com deflate do zlib do Node, e CRC32.
+ * Sem dependencia: rasteriza os dois poligonos do SVG por ponto-dentro-de-poligono e
+ * escreve o PNG na mao — cabecalho, IDAT com deflate do zlib do Node, e CRC32.
  *
  *   node scripts/gerar-icones.mjs
  */
@@ -25,31 +25,30 @@ import { fs, path, SRC, cor } from './lib/comum.mjs';
 const VERDE_PROFUNDO = [0x16, 0x30, 0x2A];   // #16302A — fundo
 const VERDE_NEON = [0xC5, 0xFF, 0x56];       // #C5FF56 — a seta
 
-// ── Geometria do simbolo, no viewBox 100x100 do asset oficial ───────────────
-// <path d="M28 72 L72 28"/>  e  <path d="M44 28 L72 28 L72 56"/>, stroke-width 15,
-// linecap e linejoin "round". Tres segmentos com raio 7.5 cobrem exatamente isso: a
-// uniao de capsulas ja produz as pontas e o canto arredondados, sem caso especial.
-const RAIO_TRACO = 7.5;
-const SEGMENTOS = [
-  [28, 72, 72, 28],   // a diagonal
-  [44, 28, 72, 28],   // aba de cima da ponta
-  [72, 28, 72, 56]    // aba da direita da ponta
+// ── Geometria do simbolo: os dois paths do enviagora-simbolo-neon.svg ───────
+// viewBox 0 0 428.391 427.180. So retas, entao cada path e um poligono.
+const LARGURA_SVG = 428.391, ALTURA_SVG = 427.180;
+const POLIGONOS = [
+  // a perna da direita
+  [[428.390624, 240.011719], [339.734374, 167.632813], [339.734374, 427.175782], [428.390624, 427.175782]],
+  // o topo e a diagonal
+  [[339.734374, 0], [0.003906, 2.875], [0.003906, 89.476563], [304.917968, 86.597656],
+    [0, 365.0625], [0, 427.136719], [61.542968, 427.179688], [428.390624, 84.921875]]
 ];
 
 const TAMANHOS = [16, 32, 48, 128];
 const AMOSTRAS = 4;                  // 4x4 por pixel — suficiente para nao serrilhar
-const OCUPACAO = 0.56;               // quanto da largura do icone a seta ocupa
+const OCUPACAO = 0.56;               // quanto da largura do icone o simbolo ocupa
 const RAIO_CANTO = 0.22;             // canto arredondado, proporcional ao lado
 
-/** Distancia de um ponto ao segmento AB (a capsula e distancia <= raio). */
-function distSegmento(px, py, ax, ay, bx, by) {
-  const vx = bx - ax, vy = by - ay;
-  const wx = px - ax, wy = py - ay;
-  const c2 = vx * vx + vy * vy;
-  let t = c2 === 0 ? 0 : (wx * vx + wy * vy) / c2;
-  t = t < 0 ? 0 : t > 1 ? 1 : t;
-  const dx = px - (ax + t * vx), dy = py - (ay + t * vy);
-  return Math.sqrt(dx * dx + dy * dy);
+/** Ponto dentro do poligono (raio horizontal, regra par-impar). */
+function dentro(px, py, pol) {
+  let d = false;
+  for (let i = 0, j = pol.length - 1; i < pol.length; j = i++) {
+    const [xi, yi] = pol[i], [xj, yj] = pol[j];
+    if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) d = !d;
+  }
+  return d;
 }
 
 /** Distancia com sinal a um quadrado de cantos arredondados centrado na origem. */
@@ -61,11 +60,8 @@ function distQuadradoArredondado(px, py, meio, raio) {
 }
 
 function desenhar(S) {
-  // Mapeia o viewBox para o icone. A seta ocupada vai de 20.5 a 79.5 (28..72 mais o raio
-  // do traco dos dois lados), entao e ESSA extensao que precisa respeitar a OCUPACAO —
-  // usar 0..100 deixaria o desenho pequeno demais dentro do quadrado.
-  const extensao = (72 - 28) + 2 * RAIO_TRACO;
-  const k = (OCUPACAO * S) / extensao;
+  // Mapeia o viewBox para o icone: o lado maior do simbolo ocupa OCUPACAO do quadrado.
+  const k = (OCUPACAO * S) / Math.max(LARGURA_SVG, ALTURA_SVG);
   const meio = S / 2;
   const raioCanto = S * RAIO_CANTO;
 
@@ -87,11 +83,9 @@ function desenhar(S) {
             coberturaFundo++;
           }
           // volta para as coordenadas do viewBox
-          const vx = (ax - meio) / k + 50;
-          const vy = (ay - meio) / k + 50;
-          for (const [x1, y1, x2, y2] of SEGMENTOS) {
-            if (distSegmento(vx, vy, x1, y1, x2, y2) <= RAIO_TRACO) { coberturaSeta++; break; }
-          }
+          const vx = (ax - meio) / k + LARGURA_SVG / 2;
+          const vy = (ay - meio) / k + ALTURA_SVG / 2;
+          if (POLIGONOS.some((p) => dentro(vx, vy, p))) coberturaSeta++;
         }
       }
 
@@ -170,7 +164,7 @@ function png(S, pixels) {
 const destino = path.join(SRC, 'icones');
 fs.mkdirSync(destino, { recursive: true });
 
-console.log('\n  Icones EnviAgora — seta neon sobre verde profundo\n');
+console.log('\n  Icones EnviAgora — simbolo neon sobre verde profundo\n');
 for (const S of TAMANHOS) {
   const arquivo = path.join(destino, 'icone-' + S + '.png');
   const dados = png(S, desenhar(S));
@@ -178,4 +172,4 @@ for (const S of TAMANHOS) {
   console.log('  ' + cor.ok(('icone-' + S + '.png').padEnd(20)) + dados.length + ' bytes');
 }
 console.log('\n  fundo  #16302A  Verde Profundo');
-console.log('  seta   #C5FF56  Verde Neon\n');
+console.log('  simbolo #C5FF56  Verde Neon\n');
