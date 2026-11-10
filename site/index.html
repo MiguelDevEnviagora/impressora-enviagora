@@ -145,6 +145,7 @@ Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/enviagora-d
       <li>Vá na pasta que o script abriu (<code>C:\Impressora-Enviagora</code>) e <strong>arraste o arquivo que termina em <code>.crx</code></strong> para dentro da tela do Chrome. Confirme em <strong>Adicionar extensão</strong>.</li>
       <li>Clique em <strong>Detalhes</strong> na extensão e ligue <strong>Permitir acesso a URLs de arquivo</strong>.</li>
       <li>Volte para a tela do sistema, aperte <kbd>F5</kbd> e imprima uma etiqueta de teste.</li>
+      <li>Confira: a extensão aparece como <strong>Painel de Operação</strong>, com o ID <code>{{ID}}</code>, e o popup abre na aba <strong>Menu da operação</strong>, com a aba <strong>Impressão</strong> ao lado.</li>
     </ol>
 
     <div class="destaque">
@@ -167,11 +168,11 @@ Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/enviagora-d
 
   <div class="cartao">
     <h2>Deu problema?</h2>
-    <p class="nota"><strong>A etiqueta saiu sem ajuste.</strong> Confira o passo 6. Depois abra a extensão e veja se aparece alguma tarja no topo da tela do sistema.</p>
+    <p class="nota"><strong>A etiqueta saiu sem ajuste.</strong> Confira o passo 5. Depois abra a extensão e veja se aparece alguma tarja no topo da tela do sistema.</p>
     <p class="nota"><strong>Apareceu uma tarja vermelha</strong> dizendo que a extensão está desligada: alguém desligou nessa máquina. Abra a extensão e ligue de volta — vai pedir a senha.</p>
     <p class="nota"><strong>Apareceu uma tarja laranja</strong> dizendo que está pausada pela central: não mexa em nada. A pausa foi feita de propósito e sai sozinha.</p>
     <p class="nota"><strong>A etiqueta sai cortada na borda.</strong> Abra a extensão, item 6, e aumente a “margem de segurança” de 0 para 1 ou 2&nbsp;mm. Não mexa na margem dos Correios.</p>
-    <p class="nota"><strong><code>CRX_FILE_NOT_READABLE</code></strong>: o Chrome não achou o arquivo. Ou o download foi bloqueado (faltou clicar em <strong>Manter</strong>), ou você arrastou da barra de downloads em vez da pasta. Confira na pasta Downloads se o arquivo está lá com cerca de <strong>630 KB</strong> — se estiver menor ou não existir, baixe de novo e clique em Manter.</p>
+    <p class="nota"><strong><code>CRX_FILE_NOT_READABLE</code></strong>: o Chrome não achou o arquivo. Ou o download foi bloqueado (faltou clicar em <strong>Manter</strong>), ou você arrastou da barra de downloads em vez da pasta. Confira na pasta Downloads se o arquivo está lá com cerca de <strong>750 KB</strong> — se estiver menor ou não existir, baixe de novo e clique em Manter.</p>
     <p class="nota"><strong>“Não é possível adicionar aplicativos, extensões e scripts de usuário deste site”</strong>: esta máquina ainda não foi preparada. Chame a TI — falta rodar o preparo, que leva 1 minuto e é feito uma vez só por máquina.</p>
   </div>
 
@@ -179,7 +180,7 @@ Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/enviagora-d
     <summary style="cursor:pointer;font-weight:700;font-size:15px">Não consegui instalar de jeito nenhum</summary>
     <p class="nota">Existe um caminho alternativo, em ZIP, para o caso de o Chrome desta máquina recusar a instalação normal mesmo depois do preparo da TI.</p>
     <p class="nota"><strong>Ele tem uma desvantagem séria: não se atualiza sozinho.</strong> Quem instalar por aqui vai precisar repetir o processo a cada correção. Use só se o botão verde não funcionar, e avise a TI.</p>
-    <p class="nota"><a href="{{URL_ZIP}}">Baixar o ZIP (sem atualização automática)</a> — descompacte numa pasta fixa, e em <code>chrome://extensions</code> use <strong>Carregar sem compactação</strong> apontando para ela. Os passos 6 e 7 acima continuam valendo.</p>
+    <p class="nota"><a href="{{URL_ZIP}}">Baixar o ZIP (sem atualização automática)</a> — descompacte numa pasta fixa, e em <code>chrome://extensions</code> use <strong>Carregar sem compactação</strong> apontando para ela. Os passos 5 a 7 acima continuam valendo.</p>
   </details>
 
   <footer>
